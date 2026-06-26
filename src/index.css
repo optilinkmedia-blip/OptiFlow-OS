@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  background-color: #09090b;
+  color: #f4f4f5;
+}
+
+/* Custom scrollbars for clean minimal dark-theme look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Hide scrollbar for specific elements */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.terminal-line {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* High Contrast Accessibility Mode Override */
+.high-contrast {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Deeper black backgrounds on layout panels */
+.high-contrast,
+.high-contrast [id*="sidebar-aside-panel"],
+.high-contrast [id*="sidebar-footer"],
+.high-contrast aside,
+.high-contrast header,
+.high-contrast main {
+  background-color: #000000 !important;
+}
+
+.high-contrast header {
+  border-bottom: 1px solid rgba(52, 211, 153, 0.4) !important;
+  background-color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Card and item backgrounds inside high-contrast mode */
+.high-contrast [class*="bg-[#18181b]"],
+.high-contrast [class*="bg-[#121215]"],
+.high-contrast [class*="bg-[#0c0c0e]"],
+.high-contrast [class*="bg-[#1c1c21]"],
+.high-contrast .bg-zinc-900,
+.high-contrast .bg-zinc-800 {
+  background-color: #050505 !important;
+  border-color: rgba(52, 211, 153, 0.45) !important;
+}
+
+/* Border visibility - force low-contrast borders to emerald-400 borders */
+.high-contrast [class*="border-white/"],
+.high-contrast [class*="border-zinc-"],
+.high-contrast .border,
+.high-contrast .border-r,
+.high-contrast .border-t,
+.high-contrast .border-b,
+.high-contrast [class*="border-emerald-500/"] {
+  border-color: rgba(52, 211, 153, 0.45) !important;
+}
+
+/* Primary text should be white for contrast */
+.high-contrast [class*="text-zinc-100"],
+.high-contrast [class*="text-zinc-200"],
+.high-contrast [class*="text-white"],
+.high-contrast h1,
+.high-contrast h2,
+.high-contrast h3,
+.high-contrast h4,
+.high-contrast h5,
+.high-contrast h6,
+.high-contrast span,
+.high-contrast p,
+.high-contrast li {
+  color: #ffffff !important;
+}
+
+/* Subtitles/labels should be high-contrast light zinc or white */
+.high-contrast [class*="text-zinc-400"],
+.high-contrast [class*="text-zinc-500"] {
+  color: #e4e4e7 !important; 
+}
+
+/* Buttons and active items should use high-contrast emerald highlights */
+.high-contrast [class*="text-emerald-500"],
+.high-contrast [class*="text-emerald-400"] {
+  color: #34d399 !important; 
+}
+
+.high-contrast [class*="bg-emerald-500"],
+.high-contrast [class*="bg-emerald-400"] {
+  background-color: #34d399 !important; 
+  color: #000000 !important; 
+}
+
+.high-contrast [class*="bg-emerald-500"] *,
+.high-contrast [class*="bg-emerald-400"] * {
+  color: #000000 !important;
+}
+
+/* Active sidebar items, highlight links with emerald-400 text or outlines */
+.high-contrast [class*="bg-[#18181b]"].text-zinc-100,
+.high-contrast [class*="bg-[#18181b]"].text-white,
+.high-contrast [class*="bg-[#18181b]"] span {
+  border: 1px solid #34d399 !important;
+  background-color: rgba(52, 211, 153, 0.15) !important;
+  color: #34d399 !important;
+}
+
+/* Buttons with white background should look clean and accessible */
+.high-contrast [class*="bg-zinc-100"],
+.high-contrast [class*="bg-white"] {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #34d399 !important;
+}
+
+/* Input fields in high contrast mode */
+.high-contrast input,
+.high-contrast select,
+.high-contrast textarea {
+  background-color: #000000 !important;
+  border-color: #34d399 !important;
+  color: #ffffff !important;
+}
+
+.high-contrast input::placeholder {
+  color: #a1a1aa !important;
+}
+
+/* Ring colors on focus */
+.high-contrast [class*="focus:ring-emerald-500"],
+.high-contrast [class*="focus:border-emerald-500"] {
+  border-color: #34d399 !important;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.5) !important;
+}
+
+/* Custom scrollbars in high-contrast mode */
+.high-contrast ::-webkit-scrollbar-thumb {
+  background: #34d399 !important;
+}
+.high-contrast ::-webkit-scrollbar-thumb:hover {
+  background: #10b981 !important;
+}
+
