@@ -1,6 +1,7 @@
 import React from "react";
 import { Copy, Plus, Search, Sparkles, Sprout, TrendingUp, Activity, AlertTriangle, Compass, DollarSign, Flame, Globe, Heart, Award, ArrowRight } from "lucide-react";
 import { PieChart, List, FileText, MessageSquare, Calendar, HelpCircle, Layers, LogOut, Settings, Bell, Circle, Plug, Contrast } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 
 interface SidebarProps {
   currentTab: string;
@@ -34,11 +35,12 @@ export default function Sidebar({
     <aside className="w-64 bg-[#09090b] border-r border-white/5 flex flex-col h-screen sticky top-0" id="sidebar-aside-panel">
       {/* Brand logic */}
       <div className="p-6">
-        <div className="flex items-center gap-3 text-zinc-100 font-semibold tracking-tight">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+        <div className="flex items-center gap-3 text-zinc-100 font-semibold tracking-tight" id="sidebar-logo-container">
+          <BrandLogo size={36} className="shrink-0 transition-transform duration-300 hover:rotate-6" />
+          <div className="flex flex-col">
+            <span className="text-zinc-100 font-bold text-sm tracking-wide">OptiFlow OS</span>
+            <span className="text-[10px] text-emerald-500 font-mono tracking-wider uppercase">Enterprise</span>
           </div>
-          <span>OptiFlow OS</span>
         </div>
       </div>
 
