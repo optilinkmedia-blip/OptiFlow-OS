@@ -43,6 +43,19 @@ export async function fetchOffers(): Promise<AffiliateOffer[]> {
   return res.json();
 }
 
+export async function addOffer(offer: Omit<AffiliateOffer, "id">): Promise<AffiliateOffer> {
+  const res = await fetch("/api/offers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(offer),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Failed to add affiliate offer");
+  }
+  return res.json();
+}
+
 export async function fetchLogs(): Promise<LogMessage[]> {
   const res = await fetch("/api/logs");
   return res.json();
@@ -56,6 +69,7 @@ export async function fetchStats(): Promise<{
     recentClicks: number[];
     recentRevenue: number[];
     dates: string[];
+    ceoDecisions?: CeoDecision[];
   };
   realtime: any[];
   events: any[];

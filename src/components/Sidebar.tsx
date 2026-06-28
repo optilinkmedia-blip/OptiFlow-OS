@@ -11,6 +11,7 @@ interface SidebarProps {
   onClearAll: () => void;
   highContrast: boolean;
   onToggleHighContrast: () => void;
+  queue?: any[];
 }
 
 export default function Sidebar({ 
@@ -20,7 +21,8 @@ export default function Sidebar({
   isClearing, 
   onClearAll,
   highContrast,
-  onToggleHighContrast
+  onToggleHighContrast,
+  queue = []
 }: SidebarProps) {
   const productLinks = [
     { id: "dashboard", label: "Overview", count: 0 },
@@ -30,6 +32,24 @@ export default function Sidebar({
     { id: "distribution", label: "Comments", count: 0 },
     { id: "ceo", label: "Scheduled", count: 8, isGreen: true },
   ];
+
+  // Calculate active engine states
+  const activeTasks = queue || [];
+  const isSeoActive = activeTasks.some(
+    (t: any) =>
+      t.status === "processing" &&
+      ["expand", "cluster", "article"].includes(t.type)
+  );
+  const isPinterestActive = activeTasks.some(
+    (t: any) =>
+      t.status === "processing" &&
+      ["pins", "publish"].includes(t.type)
+  );
+  const isTelegramActive = activeTasks.some(
+    (t: any) =>
+      t.status === "processing" &&
+      ["publish"].includes(t.type)
+  );
 
   return (
     <aside className="w-64 bg-[#09090b] border-r border-white/5 flex flex-col h-screen sticky top-0" id="sidebar-aside-panel">
@@ -65,6 +85,25 @@ export default function Sidebar({
           <div className="space-y-0.5">
             {productLinks.map((link) => {
               const isActive = link.id === currentTab && link.id !== "dashboard";
+              
+              // Determine if this specific item has an active engine pulsing
+              let hasEnginePulse = false;
+              let pulseColorClass = "bg-emerald-500";
+              let pingColorClass = "bg-emerald-400";
+              let tooltipText = "";
+              
+              if (link.id === "ai-engine") {
+                hasEnginePulse = isSeoActive;
+                pulseColorClass = "bg-emerald-500";
+                pingColorClass = "bg-emerald-400";
+                tooltipText = "SEO Engine Active";
+              } else if (link.id === "distribution") {
+                hasEnginePulse = isPinterestActive || isTelegramActive;
+                pulseColorClass = isTelegramActive ? "bg-sky-500" : "bg-pink-500";
+                pingColorClass = isTelegramActive ? "bg-sky-400" : "bg-pink-400";
+                tooltipText = isTelegramActive ? "Telegram Syndication Active" : "Pinterest Syndication Active";
+              }
+
               return (
                 <button
                   key={link.id}
@@ -73,7 +112,15 @@ export default function Sidebar({
                     isActive ? "bg-[#18181b] text-zinc-100" : "text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b]/50"
                   }`}
                 >
-                  {link.label}
+                  <span className="flex items-center gap-2">
+                    <span>{link.label}</span>
+                    {hasEnginePulse && (
+                      <span className="relative flex h-1.5 w-1.5" title={tooltipText}>
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${pingColorClass}`}></span>
+                        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${pulseColorClass}`}></span>
+                      </span>
+                    )}
+                  </span>
                   {link.count > 0 && (
                     <span
                       className={`flex h-4 px-1.5 items-center justify-center rounded-full text-[10px] font-bold ${
@@ -86,6 +133,78 @@ export default function Sidebar({
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Engine Pulse Monitor */}
+        <div className="space-y-1.5 mt-6 border-t border-white/5 pt-4">
+          <div className="px-3 flex items-center justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+            <span>Engine Pulse Status</span>
+            {(isSeoActive || isPinterestActive || isTelegramActive) && (
+              <span className="text-[9px] text-emerald-400 animate-pulse font-mono font-medium">PROCESSING</span>
+            )}
+          </div>
+          
+          <div className="space-y-2 px-3 py-2.5 rounded-lg bg-white/5 border border-white/5">
+            {/* SEO Engine */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  {isSeoActive ? (
+                    <>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </>
+                  ) : (
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-600"></span>
+                  )}
+                </span>
+                <span className="text-xs font-medium text-zinc-300">SEO Engine</span>
+              </div>
+              <span className={`text-[9px] font-mono font-medium ${isSeoActive ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                {isSeoActive ? "RUNNING" : "STANDBY"}
+              </span>
+            </div>
+
+            {/* Pinterest Engine */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  {isPinterestActive ? (
+                    <>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
+                    </>
+                  ) : (
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-600"></span>
+                  )}
+                </span>
+                <span className="text-xs font-medium text-zinc-300">Pinterest Engine</span>
+              </div>
+              <span className={`text-[9px] font-mono font-medium ${isPinterestActive ? 'text-pink-400' : 'text-zinc-500'}`}>
+                {isPinterestActive ? "ACTIVE" : "STANDBY"}
+              </span>
+            </div>
+
+            {/* Telegram Engine */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  {isTelegramActive ? (
+                    <>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                    </>
+                  ) : (
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-600"></span>
+                  )}
+                </span>
+                <span className="text-xs font-medium text-zinc-300">Telegram Engine</span>
+              </div>
+              <span className={`text-[9px] font-mono font-medium ${isTelegramActive ? 'text-sky-400' : 'text-zinc-500'}`}>
+                {isTelegramActive ? "SYNDICATING" : "STANDBY"}
+              </span>
+            </div>
           </div>
         </div>
 

@@ -9,6 +9,7 @@ import DistributionView from "./components/DistributionView";
 import MonetizationView from "./components/MonetizationView";
 import CeoView from "./components/CeoView";
 import IntegrationsView from "./components/IntegrationsView";
+import LandingPageView from "./components/LandingPageView";
 
 import {
   fetchHealth,
@@ -18,6 +19,7 @@ import {
   fetchArticles,
   fetchPins,
   fetchOffers,
+  addOffer,
   fetchLogs,
   fetchStats,
   fetchQueue,
@@ -41,6 +43,22 @@ import {
 } from "./types";
 
 export default function App() {
+  const [viewMode, setViewMode] = useState<"landing" | "app">(() => {
+    try {
+      return (sessionStorage.getItem("optiflow_view_mode") as "landing" | "app") || "landing";
+    } catch {
+      return "landing";
+    }
+  });
+
+  const handleSetViewMode = (mode: "landing" | "app") => {
+    setViewMode(mode);
+    try {
+      sessionStorage.setItem("optiflow_view_mode", mode);
+    } catch (e) {
+      console.error(e);
+    }
+  };
   const [tab, setTab] = useState("dashboard");
   const [health, setHealth] = useState({ status: "ok", mode: "offline_simulation" });
   const [seeds, setSeeds] = useState<SeedKeyword[]>([]);
@@ -60,6 +78,7 @@ export default function App() {
   const [realtime, setRealtime] = useState<any[]>([]);
   const [events, setEvents] = useState<RevenueEvent[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [ceoDecisions, setCeoDecisions] = useState<CeoDecision[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [highContrast, setHighContrast] = useState<boolean>(() => {
     try {
@@ -85,6 +104,20 @@ export default function App() {
   const [isAddingSeed, setIsAddingSeed] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
+  // Create Modal state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createModalTab, setCreateModalTab] = useState<"seed" | "offer">("seed");
+  const [modalSeedKeyword, setModalSeedKeyword] = useState("");
+  
+  // New Offer Form State
+  const [offerName, setOfferName] = useState("");
+  const [offerNetwork, setOfferNetwork] = useState<'MaxBounty' | 'ClickBank' | 'ShareASale' | 'SaaS'>("SaaS");
+  const [offerPayout, setOfferPayout] = useState("");
+  const [offerEpc, setOfferEpc] = useState("");
+  const [offerUrl, setOfferUrl] = useState("");
+  const [offerVertical, setOfferVertical] = useState("");
+  const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
+
   // Poll for background data changes
   const synchronizeDatabaseState = async () => {
     try {
@@ -105,7 +138,7 @@ export default function App() {
         fetchArticles().catch(() => []),
         fetchPins().catch(() => []),
         fetchOffers().catch(() => []),
-        fetchStats().catch(() => ({ stats: { totalRevenue: 0, totalClicks: 0, totalConversions: 0, recentClicks: [], recentRevenue: [], dates: [] }, realtime: [], events: [] })),
+        fetchStats().catch(() => ({ stats: { totalRevenue: 0, totalClicks: 0, totalConversions: 0, recentClicks: [], recentRevenue: [], dates: [], ceoDecisions: [] }, realtime: [], events: [] })),
         fetchQueue().catch(() => []),
         fetchLogs().catch(() => [])
       ]);
@@ -117,6 +150,7 @@ export default function App() {
       setPins(pinList);
       setOffers(offerList);
       setStats(statRes.stats);
+      setCeoDecisions(statRes.stats.ceoDecisions || []);
       setRealtime(statRes.realtime);
       setEvents(statRes.events);
       setQueue(queueList);
@@ -129,7 +163,11 @@ export default function App() {
   useEffect(() => {
     synchronizeDatabaseState();
     // 4-second short polling interval for live ticks and stats simulations
-    const interval = setInterval(synchronizeDatabaseState, 4000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        synchronizeDatabaseState();
+      }
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
@@ -200,7 +238,7 @@ export default function App() {
     // Let's extract CEODecision list from the database. Wait, the stats endpoint returnsStats but let's check
     // if we can extract it cleanly from local state database. In server, we expose it or save.
     // Let's parse ceo logs from the logs queue or write an endpoint check.
-    // Since our mock database supports seeds/keywords etc., we can fetch decisions if they exist.
+    // Fetch CEO decisions if they exist.
     // Wait, let's look at what's in logs, or better yet, we can filter our logs list or fetch server decisions.
     // Let's write standard client logic:
     // Our server saves decisions in `ceoDecisions`. Let's extend stats return to include `ceoDecisions`!
@@ -293,7 +331,7 @@ export default function App() {
       case "ceo":
         return (
           <CeoView
-            decisions={(stats as any).ceoDecisions || []}
+            decisions={ceoDecisions}
             onTriggerCeoRun={handleTriggerCeoOptimize}
             onRefresh={synchronizeDatabaseState}
             articleCount={articles.length}
@@ -312,6 +350,10 @@ export default function App() {
     }
   };
 
+  if (viewMode === "landing") {
+    return <LandingPageView onEnterApp={() => handleSetViewMode("app")} />;
+  }
+
   return (
     <div className={`flex min-h-screen text-zinc-100 font-sans leading-normal selection:bg-emerald-500/20 selection:text-emerald-200 transition-colors duration-200 ${
       highContrast ? "high-contrast bg-black text-white" : "bg-[#09090b]"
@@ -326,6 +368,7 @@ export default function App() {
         onClearAll={handleClearAll}
         highContrast={highContrast}
         onToggleHighContrast={handleToggleHighContrast}
+        queue={queue}
       />
 
       {/* Main Panel Frame */}
@@ -352,6 +395,37 @@ export default function App() {
              />
           </div>
 
+          {/* System Health Status Indicator */}
+          <div 
+            onClick={synchronizeDatabaseState}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] cursor-pointer transition-all duration-300 shadow-inner group select-none"
+            title="System Operational Status - Click to Sync"
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              {pendingTasks.length > 0 ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></span>
+                </>
+              ) : (
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              )}
+            </span>
+            <div className="flex flex-col text-left">
+              <span className="text-[9px] font-mono text-zinc-500 group-hover:text-zinc-400 leading-none tracking-wider font-semibold uppercase">OS Status</span>
+              <span className="text-xs font-semibold text-zinc-300 mt-0.5 flex items-center gap-1">
+                {pendingTasks.length > 0 ? (
+                  <>
+                    <span className="text-emerald-400 font-bold tracking-tight">Active Pulse</span>
+                    <span className="text-[10px] font-mono text-zinc-500 font-normal">({pendingTasks.length} in queue)</span>
+                  </>
+                ) : (
+                  <span className="text-zinc-400 font-medium">Ready</span>
+                )}
+              </span>
+            </div>
+          </div>
+
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
                <button className="h-8 w-8 rounded-full bg-[#18181b] flex items-center justify-center text-zinc-400 hover:text-zinc-100 transition border border-white/5">
@@ -364,17 +438,212 @@ export default function App() {
                  <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop" alt="User avatar" />
                </div>
             </div>
-            <button className="bg-zinc-100 text-black font-medium text-sm px-4 py-1.5 rounded-full hover:bg-white transition shadow-sm">
+            <button 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-zinc-100 text-black font-medium text-sm px-4 py-1.5 rounded-full hover:bg-white transition shadow-sm cursor-pointer"
+            >
               Create
             </button>
           </div>
         </header>
 
         {/* Dynamic Inner Tab switches */}
-        <main className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 select-none mt-2">
-          {renderTabContent()}
+        <main className="flex-1 p-8 md:p-12 max-w-7xl mx-auto w-full select-none my-6 bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-[2.5rem] shadow-2xl relative flex flex-col">
+          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent rounded-[2.5rem] pointer-events-none"></div>
+          <div className="relative z-10 flex-1 flex flex-col">
+            {renderTabContent()}
+          </div>
         </main>
       </div>
+
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1f1e24] border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl relative space-y-4">
+            
+            {/* Close button */}
+            <button 
+              onClick={() => setIsCreateModalOpen(false)}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-white transition cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Modal Title */}
+            <div>
+              <h3 className="text-lg font-bold text-white">Create Asset</h3>
+              <p className="text-xs text-zinc-400">Launch a new campaign seed or affiliate monetization unit</p>
+            </div>
+
+            {/* Tab selector */}
+            <div className="flex border-b border-white/10 text-xs font-mono">
+              <button 
+                onClick={() => setCreateModalTab("seed")}
+                className={`flex-1 pb-2 font-semibold border-b-2 text-center transition cursor-pointer ${createModalTab === 'seed' ? 'border-emerald-500 text-white font-bold' : 'border-transparent text-zinc-500'}`}
+              >
+                Seed Keyword
+              </button>
+              <button 
+                onClick={() => setCreateModalTab("offer")}
+                className={`flex-1 pb-2 font-semibold border-b-2 text-center transition cursor-pointer ${createModalTab === 'offer' ? 'border-emerald-500 text-white font-bold' : 'border-transparent text-zinc-500'}`}
+              >
+                Affiliate Offer
+              </button>
+            </div>
+
+            {/* Content for Seed Keyword */}
+            {createModalTab === "seed" && (
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!modalSeedKeyword.trim()) return;
+                setIsCreateModalOpen(false);
+                setTab("seeds");
+                await handleAddSeed(modalSeedKeyword.trim());
+                setModalSeedKeyword("");
+              }} className="space-y-4 pt-2">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-mono text-zinc-400 uppercase font-semibold">Seed Topic / Keyword</label>
+                  <input 
+                    type="text"
+                    value={modalSeedKeyword}
+                    onChange={(e) => setModalSeedKeyword(e.target.value)}
+                    placeholder="e.g. ketogenic recipes"
+                    className="w-full bg-[#18181b] text-zinc-200 text-xs rounded-xl px-4 py-2.5 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition"
+                    autoFocus
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!modalSeedKeyword.trim() || isAddingSeed}
+                  className="w-full bg-[#22c55e] text-white py-2.5 rounded-xl text-xs font-bold hover:bg-[#22c55e]/90 transition shadow-md disabled:bg-[#35343d] disabled:text-white/40 cursor-pointer"
+                >
+                  {isAddingSeed ? "Launching..." : "Launch Programmatic Pipeline"}
+                </button>
+              </form>
+            )}
+
+            {/* Content for Affiliate Offer */}
+            {createModalTab === "offer" && (
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!offerName || !offerUrl || !offerVertical) return;
+                setIsSubmittingOffer(true);
+                try {
+                  await addOffer({
+                    name: offerName,
+                    network: offerNetwork,
+                    payout: parseFloat(offerPayout) || 0,
+                    epc: parseFloat(offerEpc) || 0,
+                    url: offerUrl,
+                    vertical: offerVertical
+                  });
+                  await synchronizeDatabaseState();
+                  setTab("monetization");
+                  setIsCreateModalOpen(false);
+                  
+                  // Clear fields
+                  setOfferName("");
+                  setOfferNetwork("SaaS");
+                  setOfferPayout("");
+                  setOfferEpc("");
+                  setOfferUrl("");
+                  setOfferVertical("");
+                } catch (err) {
+                  console.error(err);
+                } finally {
+                  setIsSubmittingOffer(false);
+                }
+              }} className="space-y-3 pt-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-mono text-zinc-400 uppercase font-semibold">Offer Name</label>
+                    <input 
+                      type="text"
+                      value={offerName}
+                      onChange={(e) => setOfferName(e.target.value)}
+                      placeholder="Custom Copy AI"
+                      className="w-full bg-[#18181b] text-zinc-200 text-xs rounded-xl px-3 py-2 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-mono text-zinc-400 uppercase font-semibold">Network</label>
+                    <select 
+                      value={offerNetwork}
+                      onChange={(e) => setOfferNetwork(e.target.value as any)}
+                      className="w-full bg-[#18181b] text-zinc-200 text-xs rounded-xl px-3 py-2 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition cursor-pointer"
+                    >
+                      <option value="SaaS">SaaS</option>
+                      <option value="ClickBank">ClickBank</option>
+                      <option value="MaxBounty">MaxBounty</option>
+                      <option value="ShareASale">ShareASale</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-mono text-zinc-400 uppercase font-semibold">Payout ($)</label>
+                    <input 
+                      type="number"
+                      step="0.01"
+                      value={offerPayout}
+                      onChange={(e) => setOfferPayout(e.target.value)}
+                      placeholder="45.00"
+                      className="w-full bg-[#18181b] text-zinc-200 text-xs rounded-xl px-3 py-2 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-mono text-zinc-400 uppercase font-semibold">Est. EPC ($)</label>
+                    <input 
+                      type="number"
+                      step="0.01"
+                      value={offerEpc}
+                      onChange={(e) => setOfferEpc(e.target.value)}
+                      placeholder="1.20"
+                      className="w-full bg-[#18181b] text-zinc-200 text-xs rounded-xl px-3 py-2 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-mono text-zinc-400 uppercase font-semibold">Redirect Link / Affiliate URL</label>
+                  <input 
+                    type="url"
+                    value={offerUrl}
+                    onChange={(e) => setOfferUrl(e.target.value)}
+                    placeholder="https://affiliate.com/offer"
+                    className="w-full bg-[#18181b] text-zinc-200 text-xs rounded-xl px-3 py-2 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-mono text-zinc-400 uppercase font-semibold">Vertical / Niche Category</label>
+                  <input 
+                    type="text"
+                    value={offerVertical}
+                    onChange={(e) => setOfferVertical(e.target.value)}
+                    placeholder="AI Writing, Weight Loss, Finance"
+                    className="w-full bg-[#18181b] text-zinc-200 text-xs rounded-xl px-3 py-2 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingOffer}
+                  className="w-full bg-[#22c55e] text-white py-2.5 rounded-xl text-xs font-bold hover:bg-[#22c55e]/90 transition shadow-md disabled:bg-[#35343d] disabled:text-white/40 cursor-pointer mt-2"
+                >
+                  {isSubmittingOffer ? "Saving Offer..." : "Register Affiliate Offer"}
+                </button>
+              </form>
+            )}
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

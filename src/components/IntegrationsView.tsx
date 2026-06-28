@@ -19,7 +19,9 @@ import {
   Plug, 
   Eye, 
   EyeOff,
-  Search
+  Search,
+  Plus,
+  X
 } from "lucide-react";
 import { fetchIntegrations, updateIntegration, testIntegration } from "../lib/api";
 
@@ -47,6 +49,66 @@ export default function IntegrationsView() {
   const [tempKeys, setTempKeys] = useState<Record<string, string>>({});
   const [tempConfigs, setTempConfigs] = useState<Record<string, Record<string, string>>>({});
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+
+  // New API Integration registration states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newApiId, setNewApiId] = useState("");
+  const [newApiName, setNewApiName] = useState("");
+  const [newApiDesc, setNewApiDesc] = useState("");
+  const [newApiKey, setNewApiKey] = useState("");
+  const [newApiUrl, setNewApiUrl] = useState("");
+  const [newApiError, setNewApiError] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleRegisterCustomApi = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newApiId.trim() || !newApiName.trim()) {
+      setNewApiError("ID and Name are required.");
+      return;
+    }
+    
+    // Normalize ID to alphanumeric lowercase with underscores
+    const cleanId = newApiId.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_");
+    
+    setIsAdding(true);
+    setNewApiError("");
+    try {
+      const res = await fetch("/api/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: cleanId,
+          name: newApiName.trim(),
+          description: newApiDesc.trim(),
+          apiKey: newApiKey.trim(),
+          isCustom: true,
+          additionalConfig: {
+            siteUrl: newApiUrl.trim()
+          }
+        })
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to register custom API");
+      }
+      
+      await loadData();
+      setSelectedId(cleanId);
+      setShowAddModal(false);
+      
+      // Reset state
+      setNewApiId("");
+      setNewApiName("");
+      setNewApiDesc("");
+      setNewApiKey("");
+      setNewApiUrl("");
+    } catch (err: any) {
+      setNewApiError(err.message || "An error occurred during registration.");
+    } finally {
+      setIsAdding(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -209,9 +271,17 @@ export default function IntegrationsView() {
           </div>
           
           <button 
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 font-medium text-sm transition cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Register Custom API</span>
+          </button>
+
+          <button 
             onClick={loadData}
             disabled={loading}
-            className="p-2.5 rounded-xl border border-white/5 bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white transition disabled:opacity-50"
+            className="p-2.5 rounded-xl border border-white/5 bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white transition disabled:opacity-50 cursor-pointer"
             title="Refresh integration states"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -385,21 +455,43 @@ export default function IntegrationsView() {
 
                     {/* Conditional input fields based on integration ID */}
                     {item.id === "gemini" && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 font-mono">
-                            Preferred Model Version
-                          </label>
-                          <select
-                            className="w-full bg-[#18181b] text-zinc-100 text-sm rounded-xl px-4 py-3 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition cursor-pointer"
-                            value={tempConfigs[item.id]?.model || "gemini-2.5-flash"}
-                            onChange={e => handleConfigChange(item.id, "model", e.target.value)}
-                          >
-                            <option value="gemini-2.5-flash">gemini-2.5-flash (Fast & Accurate)</option>
-                            <option value="gemini-2.5-pro">gemini-2.5-pro (High Intelligence)</option>
-                            <option value="gemini-1.5-flash">gemini-1.5-flash (Legacy Fast)</option>
-                            <option value="gemini-2.0-flash-exp">gemini-2.0-flash-exp (Experimental)</option>
-                          </select>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 font-mono flex items-center justify-between">
+                              <span>Preferred Model Version</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const useCustom = tempConfigs[item.id]?.useCustomModel !== "true";
+                                  handleConfigChange(item.id, "useCustomModel", useCustom ? "true" : "false");
+                                }}
+                                className="text-[10px] text-emerald-400 hover:text-emerald-300 transition hover:underline font-normal cursor-pointer"
+                              >
+                                {tempConfigs[item.id]?.useCustomModel === "true" ? "Choose from list" : "Enter custom model ID"}
+                              </button>
+                            </label>
+                            
+                            {tempConfigs[item.id]?.useCustomModel === "true" ? (
+                              <input
+                                type="text"
+                                placeholder="e.g. gemini-2.0-flash"
+                                className="w-full bg-[#18181b] text-zinc-100 text-sm rounded-xl px-4 py-3 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition font-mono"
+                                value={tempConfigs[item.id]?.model || ""}
+                                onChange={e => handleConfigChange(item.id, "model", e.target.value)}
+                              />
+                            ) : (
+                              <select
+                                className="w-full bg-[#18181b] text-zinc-100 text-sm rounded-xl px-4 py-3 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition cursor-pointer font-mono"
+                                value={tempConfigs[item.id]?.model || "gemini-2.0-flash"}
+                                onChange={e => handleConfigChange(item.id, "model", e.target.value)}
+                              >
+                                <option value="gemini-2.0-flash">gemini-2.0-flash (Fast)</option>
+                                <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Advanced Reasoning)</option>
+                                <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Lite)</option>
+                              </select>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -495,6 +587,23 @@ export default function IntegrationsView() {
                         </div>
                       </div>
                     )}
+
+                    {!["gemini", "apify", "wordpress", "pinterest", "google_analytics", "mailchimp"].includes(item.id) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 font-mono">
+                            Base / Test URL
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="https://api.partner.com/v1"
+                            className="w-full bg-[#18181b] text-zinc-100 text-sm rounded-xl px-4 py-3 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition font-mono"
+                            value={tempConfigs[item.id]?.siteUrl || ""}
+                            onChange={e => handleConfigChange(item.id, "siteUrl", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Feedback Message */}
@@ -586,6 +695,135 @@ export default function IntegrationsView() {
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* Custom API Registration Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-[#121215] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#18181b]">
+              <div className="flex items-center gap-2">
+                <Plug className="h-5 w-5 text-emerald-500" />
+                <h2 className="text-lg font-bold text-zinc-100">Register Custom API Integration</h2>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="text-zinc-400 hover:text-white transition p-1 rounded-lg hover:bg-white/5 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form onSubmit={handleRegisterCustomApi} className="p-6 space-y-4">
+              {newApiError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-mono flex items-center gap-2">
+                  <XCircle className="h-4 w-4 shrink-0" />
+                  <span>{newApiError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5 font-mono">
+                  Integration ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. tracking_partner_api"
+                  className="w-full bg-[#18181b] text-zinc-100 text-sm rounded-xl px-4 py-2.5 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition font-mono"
+                  value={newApiId}
+                  onChange={e => setNewApiId(e.target.value)}
+                />
+                <p className="text-[10px] text-zinc-500 mt-1">Unique slug used in backend calls. Non-alphanumeric chars will be converted to underscores.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5 font-mono">
+                  Display Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Custom Conversion Tracker"
+                  className="w-full bg-[#18181b] text-zinc-100 text-sm rounded-xl px-4 py-2.5 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition"
+                  value={newApiName}
+                  onChange={e => setNewApiName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5 font-mono">
+                  Description
+                </label>
+                <textarea
+                  placeholder="Describe what this custom integration handles..."
+                  rows={2}
+                  className="w-full bg-[#18181b] text-zinc-100 text-sm rounded-xl px-4 py-2.5 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition resize-none"
+                  value={newApiDesc}
+                  onChange={e => setNewApiDesc(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5 font-mono">
+                    Base / test URL
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://api.partner.com/v1"
+                    className="w-full bg-[#18181b] text-zinc-100 text-sm rounded-xl px-4 py-2.5 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition font-mono"
+                    value={newApiUrl}
+                    onChange={e => setNewApiUrl(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5 font-mono">
+                    API Secret Key / Credential
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="sk_live_..."
+                    className="w-full bg-[#18181b] text-zinc-100 text-sm rounded-xl px-4 py-2.5 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition font-mono"
+                    value={newApiKey}
+                    onChange={e => setNewApiKey(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 rounded-xl bg-[#18181b] border border-white/5 hover:bg-[#27272a] text-zinc-300 hover:text-white transition text-sm font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAdding}
+                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-semibold transition text-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {isAdding ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Registering...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      <span>Register Integration</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

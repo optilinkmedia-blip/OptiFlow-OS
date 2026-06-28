@@ -2,6 +2,56 @@ import React from "react";
 import { ArrowUpRight, Flame, ShoppingCart, Activity, Download, FileText, Share2, Tag, SearchX } from "lucide-react";
 import { Article, Pin, RevenueEvent, RevenueStats, SeedKeyword } from "../types";
 
+function Sparkline({ data, color = "#10b981", height = 36 }: { data: number[], color?: string, height?: number }) {
+  if (!data || data.length < 2) return null;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const range = max - min === 0 ? 1 : max - min;
+  
+  const width = 100;
+  const points = data.map((val, idx) => {
+    const x = (idx / (data.length - 1)) * width;
+    const y = height - ((val - min) / range) * (height - 6) - 3;
+    return `${x},${y}`;
+  });
+
+  const pathD = `M ${points.join(" L ")}`;
+  const areaD = `${pathD} L ${width},${height} L 0,${height} Z`;
+  const gradId = `sparkline-grad-${color.replace('#', '')}`;
+
+  return (
+    <div className="relative" style={{ height: `${height}px`, width: `${width}px` }}>
+      <svg className="overflow-visible" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path
+          d={areaD}
+          fill={`url(#${gradId})`}
+          stroke="none"
+        />
+        <path
+          d={pathD}
+          fill="none"
+          stroke={color}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle
+          cx={width}
+          cy={height - ((data[data.length - 1] - min) / range) * (height - 6) - 3}
+          r="2"
+          fill={color}
+        />
+      </svg>
+    </div>
+  );
+}
+
 interface DashboardViewProps {
   stats: RevenueStats;
   realtime: any[];
@@ -108,8 +158,12 @@ export default function DashboardView({
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredPins.map(pin => (
                     <div key={pin.id} className="bg-[#18181b] border border-white/5 p-4 rounded-xl shadow-sm flex items-start gap-4">
-                      {pin.mockImageUrl && (
-                        <img src={pin.mockImageUrl} alt={pin.title} className="w-16 h-16 object-cover rounded-lg bg-[#27272a]" />
+                      {pin.imageUrl ? (
+                        <img src={pin.imageUrl} alt={pin.title} className="w-16 h-16 object-cover rounded-lg bg-[#27272a]" />
+                      ) : (
+                        <div className="w-16 h-16 rounded-lg bg-[#27272a] flex items-center justify-center border border-white/5 text-xs text-zinc-500 text-center px-1">
+                          No Image
+                        </div>
                       )}
                       <div className="min-w-0">
                         <div className="font-semibold text-zinc-100 mb-1 truncate text-sm">{pin.title}</div>
@@ -155,33 +209,50 @@ export default function DashboardView({
                 </div>
              </div>
 
-             <div className="grid grid-cols-2 gap-4 mb-8">
-               <div className="bg-[#09090b] rounded-xl p-5 shadow-sm border border-white/5">
-                 <div className="flex items-center gap-2 text-zinc-500 text-[12px] mb-2 font-medium">
-                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                   Yield Revenue
-                 </div>
-                 <div className="flex items-baseline gap-3">
-                   <span className="text-3xl font-bold text-zinc-100 tracking-tight">${stats.totalRevenue.toFixed(0)}</span>
-                   <div className="flex items-center gap-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                     <ArrowUpRight className="h-3 w-3" />
-                     +14.2%
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+               <div className="bg-[#09090b] rounded-xl p-5 shadow-sm border border-white/5 flex items-center justify-between gap-4">
+                 <div className="min-w-0 flex-1">
+                   <div className="flex items-center gap-2 text-zinc-500 text-[12px] mb-2 font-medium">
+                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                     Yield Revenue
                    </div>
+                   <div className="flex items-baseline gap-2 flex-wrap">
+                     <span className="text-3xl font-bold text-zinc-100 tracking-tight">${stats.totalRevenue.toFixed(0)}</span>
+                     <div className="flex items-center gap-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0">
+                       <ArrowUpRight className="h-3 w-3" />
+                       +14.2%
+                     </div>
+                   </div>
+                 </div>
+                 <div className="shrink-0">
+                   <Sparkline 
+                     data={stats.recentRevenue?.length > 0 ? stats.recentRevenue : [100, 120, 115, 140, 135, 160, 180]} 
+                     color="#10b981" 
+                     height={32}
+                   />
                  </div>
                </div>
 
-               <div className="bg-[#09090b] rounded-xl p-5 shadow-sm border border-white/5">
-                 <div className="flex items-center gap-2 text-zinc-500 text-[12px] mb-2 font-medium">
-                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 21H3V3"></path><path d="M21 9l-9-9-4 4 9 9"></path><path d="M3 21l9-9 4 4-9 9"></path></svg>
-                   Site Sessions
-                 </div>
-                 <div className="flex items-baseline gap-3">
-                   <span className="text-3xl font-bold text-zinc-100 tracking-tight">{stats.totalClicks}k</span>
-                   <div className="flex items-center gap-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                     <ArrowUpRight className="h-3 w-3" />
-                     +36.8%
+               <div className="bg-[#09090b] rounded-xl p-5 shadow-sm border border-white/5 flex items-center justify-between gap-4">
+                 <div className="min-w-0 flex-1">
+                   <div className="flex items-center gap-2 text-zinc-500 text-[12px] mb-2 font-medium">
+                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 21H3V3"></path><path d="M21 9l-9-9-4 4 9 9"></path><path d="M3 21l9-9 4 4-9 9"></path></svg>
+                     Site Sessions
                    </div>
-                   <span className="text-zinc-600 text-[10px] ml-1">vs last month</span>
+                   <div className="flex items-baseline gap-2 flex-wrap">
+                     <span className="text-3xl font-bold text-zinc-100 tracking-tight">{stats.totalClicks}k</span>
+                     <div className="flex items-center gap-1 bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0">
+                       <ArrowUpRight className="h-3 w-3" />
+                       +36.8%
+                     </div>
+                   </div>
+                 </div>
+                 <div className="shrink-0">
+                   <Sparkline 
+                     data={stats.recentClicks?.length > 0 ? stats.recentClicks : [45, 52, 49, 60, 58, 68, 72]} 
+                     color="#38bdf8" 
+                     height={32}
+                   />
                  </div>
                </div>
              </div>

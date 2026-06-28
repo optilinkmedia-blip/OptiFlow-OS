@@ -1,6 +1,7 @@
-import React from "react";
-import { Link, Map, MessageSquare, Send, Share2, TrendingUp } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Link, Map, MessageSquare, Send, Share2, TrendingUp, Settings } from "lucide-react";
 import { Pin } from "../types";
+import { fetchIntegrations } from "../lib/api";
 
 interface DistributionViewProps {
   pins: Pin[];
@@ -8,6 +9,24 @@ interface DistributionViewProps {
 }
 
 export default function DistributionView({ pins, onTriggerCycle }: DistributionViewProps) {
+  const [autoPost, setAutoPost] = useState(false);
+  const [scraperStatus, setScraperStatus] = useState<string>("disconnected");
+
+  useEffect(() => {
+    const loadIntegrations = async () => {
+      try {
+        const integrations = await fetchIntegrations();
+        const scraper = integrations.find((i: any) => i.id === "pinterest_scraper5");
+        if (scraper) {
+          setScraperStatus(scraper.status);
+        }
+      } catch (err) {
+        console.error("Failed to load scraper status:", err);
+      }
+    };
+    loadIntegrations();
+  }, []);
+
   const publishedPins = pins.filter(p => p.published);
   const totalClicks = pins.reduce((a, b) => a + (b.clicks || 0), 0);
 
@@ -53,14 +72,31 @@ export default function DistributionView({ pins, onTriggerCycle }: DistributionV
               <h2 className="text-sm font-bold text-white/90">Programmatic Pinterest Board Syndicator</h2>
               <p className="text-xs text-white/40 mt-0.5">High-CTR pin graphics designed automatically matching campaign keywords</p>
             </div>
-            {pins.length > 0 && pins.some(p => !p.published) && (
-              <button
-                onClick={onTriggerCycle}
-                className="text-xs text-[#22c55e] hover:text-[#22c55e] font-bold hover:underline cursor-pointer"
-              >
-                Publish drafts live
-              </button>
-            )}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setAutoPost(!autoPost)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${autoPost ? 'bg-emerald-500' : 'bg-white/10'}`}
+                >
+                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${autoPost ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-white/90">Auto-post</span>
+                  <span className={`text-[9px] font-mono ${scraperStatus === 'connected' ? 'text-emerald-500' : 'text-amber-500'}`}>
+                    Scraper: {scraperStatus}
+                  </span>
+                </div>
+              </div>
+              
+              {pins.length > 0 && pins.some(p => !p.published) && (
+                <button
+                  onClick={onTriggerCycle}
+                  className="text-xs text-[#22c55e] hover:text-[#22c55e] font-bold hover:underline cursor-pointer ml-2 border-l border-white/10 pl-4"
+                >
+                  Publish drafts live
+                </button>
+              )}
+            </div>
           </div>
 
           {pins.length === 0 ? (
@@ -76,12 +112,18 @@ export default function DistributionView({ pins, onTriggerCycle }: DistributionV
                   
                   {/* Mock Image Preview area overlay with gradients and text */}
                   <div className="relative h-40 w-full bg-[#35343d] overflow-hidden flex items-center justify-center border-b border-white/5">
-                    <img 
-                      src={pin.mockImageUrl} 
-                      alt="Pin mock" 
-                      className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105 opacity-60 group-hover:opacity-75"
-                      referrerPolicy="no-referrer"
-                    />
+                    {pin.imageUrl ? (
+                      <img 
+                        src={pin.imageUrl} 
+                        alt="Pin mock" 
+                        className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105 opacity-60 group-hover:opacity-75"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-xs text-zinc-500 bg-[#27272a]">
+                        Pending Image Generation
+                      </div>
+                    )}
                     
                     {/* Artistic gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent" />

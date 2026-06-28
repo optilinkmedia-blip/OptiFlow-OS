@@ -88,7 +88,7 @@ export interface Pin {
   title: string;
   description: string;
   imagePrompt: string;
-  mockImageUrl: string;
+  imageUrl?: string;
   targetUrl: string;
   clicks: number;
   published: boolean;
@@ -123,6 +123,7 @@ export interface RevenueStats {
   recentClicks: number[];
   recentRevenue: number[];
   dates: string[];
+  ceoDecisions?: CeoDecision[];
 }
 
 export interface RealtimeMetrics {

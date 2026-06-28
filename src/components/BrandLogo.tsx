@@ -10,74 +10,66 @@ export default function BrandLogo({ className = "", size = 32 }: BrandLogoProps)
     <svg
       width={size}
       height={size}
-      viewBox="0 0 100 100"
+      viewBox="0 0 500 500"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={`select-none ${className}`}
       id="optiflow-brand-logo-svg"
     >
-      {/* Outer thick black circle */}
-      <circle cx="50" cy="50" r="48" fill="#000000" stroke="#10b981" strokeWidth="3" />
-      
-      {/* Inner thin green circle */}
-      <circle cx="50" cy="50" r="44" stroke="#10b981" strokeWidth="1.5" />
+      <defs>
+        <clipPath id="globe-clip">
+          <circle cx="250" cy="250" r="230" />
+        </clipPath>
+        <path id="banner-text-path" d="M 40 295 Q 250 215 460 295" />
+      </defs>
 
-      {/* Top Globe Grid (Latitude curves arching UP) */}
-      <g stroke="#10b981" strokeWidth="2" fill="none" opacity="0.9">
-        {/* Latitudes */}
-        <path d="M 14,35 A 38,38 0 0,1 86,35" />
-        <path d="M 22,23 A 35,35 0 0,1 78,23" />
-        <path d="M 33,13 A 32,32 0 0,1 67,13" />
-        
-        {/* Longitudes */}
-        <line x1="50" y1="6" x2="50" y2="38" />
-        <path d="M 31,10 Q 42,24 42,39" />
-        <path d="M 19,20 Q 32,28 32,37" />
-        <path d="M 69,10 Q 58,24 58,39" />
-        <path d="M 81,20 Q 68,28 68,37" />
+      {/* Base Globe Fill - Spotify Green */}
+      <circle cx="250" cy="250" r="230" fill="#1ed760" />
+
+      {/* Grid Lines Group - Clipped to Globe */}
+      <g clipPath="url(#globe-clip)" stroke="#000000" strokeWidth="16" strokeLinecap="round" fill="none">
+        {/* Latitudes (Horizontal-ish Curves) */}
+        {/* Top hemisphere */}
+        <path d="M 0 100 Q 250 -20 500 100" />
+        <path d="M 0 180 Q 250 80 500 180" />
+        {/* Bottom hemisphere */}
+        <path d="M 0 320 Q 250 420 500 320" />
+        <path d="M 0 400 Q 250 520 500 400" />
+
+        {/* Longitudes (Vertical-ish Curves) */}
+        <line x1="250" y1="0" x2="250" y2="500" />
+        <path d="M 170 0 Q 130 250 170 500" />
+        <path d="M 90 0 Q 30 250 90 500" />
+        <path d="M 330 0 Q 370 250 330 500" />
+        <path d="M 410 0 Q 470 250 410 500" />
+
+        {/* The Black Banner - Rotated */}
+        <g transform="rotate(-15 250 250)">
+          <path 
+            d="M -100 200 Q 250 120 600 200 L 600 320 Q 250 240 -100 320 Z" 
+            fill="#000000" 
+            stroke="none" 
+          />
+        </g>
       </g>
 
-      {/* Bottom Globe Grid (Latitude curves arching DOWN) */}
-      <g stroke="#10b981" strokeWidth="2" fill="none" opacity="0.9">
-        {/* Latitudes */}
-        <path d="M 14,65 A 38,38 0 0,0 86,65" />
-        <path d="M 22,77 A 35,35 0 0,0 78,77" />
-        <path d="M 33,87 A 32,32 0 0,0 67,87" />
-        
-        {/* Longitudes */}
-        <line x1="50" y1="62" x2="50" y2="94" />
-        <path d="M 42,61 Q 42,76 31,90" />
-        <path d="M 32,63 Q 32,72 19,80" />
-        <path d="M 58,61 Q 58,76 69,90" />
-        <path d="M 68,63 Q 68,72 81,80" />
+      {/* Text inside the banner - Rotated identically */}
+      <g transform="rotate(-15 250 250)">
+        <text 
+          fill="#f4eadc" 
+          fontFamily="'Space Grotesk', 'Outfit', 'Inter', 'Arial Black', sans-serif" 
+          fontWeight="900" 
+          fontSize="76" 
+          letterSpacing="1"
+        >
+          <textPath href="#banner-text-path" startOffset="50%" textAnchor="middle">
+            OPTIFLOW
+          </textPath>
+        </text>
       </g>
 
-      {/* Solid Black Pinched Banner Overlay */}
-      <path 
-        d="M 4,37 Q 50,45 96,37 L 96,63 Q 50,55 4,63 Z" 
-        fill="#000000" 
-        stroke="#10b981" 
-        strokeWidth="3.5" 
-      />
-
-      {/* Styled text "OPTIFLOW" mimicking Spotify's playful/custom hand-drawn look */}
-      <g 
-        fill="#fafaf9" 
-        style={{ 
-          fontFamily: "'Space Grotesk', 'Inter', 'Arial Black', sans-serif", 
-          fontWeight: 900,
-          letterSpacing: "-0.5px"
-        }}
-      >
-        <text x="9" y="56.5" fontSize="16" transform="rotate(-11 9 56.5)">O</text>
-        <text x="19.5" y="54" fontSize="15" transform="rotate(-8 19.5 54)">P</text>
-        <text x="30" y="52" fontSize="14" transform="rotate(-4 30 52)">T</text>
-        <text x="39" y="50" fontSize="14" transform="rotate(-1 39 50)">I</text>
-        <text x="45.5" y="50" fontSize="14" transform="rotate(1 45.5 50)">F</text>
-        <text x="54.5" y="51.5" fontSize="14.5" transform="rotate(4 54.5 51.5)">L</text>
-        <text x="64.5" y="53.5" fontSize="15.5" transform="rotate(7 64.5 53.5)">O</text>
-        <text x="75" y="56.5" fontSize="16.5" transform="rotate(11 75 56.5)">W</text>
-      </g>
+      {/* Thick Outer Outline */}
+      <circle cx="250" cy="250" r="230" fill="none" stroke="#000000" strokeWidth="24" />
     </svg>
   );
 }
