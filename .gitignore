@@ -9,3 +9,8 @@ coverage/
 !.env.example
 src/server/db.json
 data/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
