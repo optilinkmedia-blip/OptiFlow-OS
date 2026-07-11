@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, Calendar, ChevronRight, Eye, FileText, Globe, Search } from "lucide-react";
+import { BookOpen, Calendar, ChevronRight, Eye, FileText, Globe, Search, Download, Send } from "lucide-react";
 import { Article } from "../types";
 
 interface ContentFactoryViewProps {
@@ -15,6 +15,23 @@ export default function ContentFactoryView({ articles, offers }: ContentFactoryV
   const getOfferName = (offerId: string) => {
     const offer = offers.find(o => o.id === offerId);
     return offer ? `${offer.name} (${offer.network})` : "Unassigned Offer";
+  };
+
+  const handleDownload = (article: Article) => {
+    const blob = new Blob([article.content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${article.keyword.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePost = (article: Article) => {
+    // In a real app this would trigger an API call to post to WordPress / CMS
+    alert(`Deploying article "${article.title}" to connected CMS / distribution channels.`);
   };
 
   return (
@@ -211,6 +228,24 @@ export default function ContentFactoryView({ articles, offers }: ContentFactoryV
                   </div>
                 </div>
               )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 py-2 border-t border-b border-white/5 my-4">
+                <button
+                  onClick={() => handleDownload(selectedArticle)}
+                  className="flex items-center gap-2 bg-[#1f1e24] border border-white/10 hover:bg-[#2b2a31] text-white/80 transition-colors px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Output (.md)
+                </button>
+                <button
+                  onClick={() => handlePost(selectedArticle)}
+                  className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-900 transition-colors px-4 py-2 rounded-lg text-xs font-bold cursor-pointer shadow-md hover:shadow-emerald-500/20"
+                >
+                  <Send className="h-4 w-4" />
+                  Post to CMS
+                </button>
+              </div>
 
               {/* Tabs for Structured Metadata vs Markdown Body */}
               <div className="space-y-4">

@@ -35,10 +35,22 @@ export default function MonetizationView({ offers, articles, onRefresh }: Moneti
       
       setSimulationMsg("Handshake successful. Dispatching postback ping...");
       
+      let token = "optiflow_postback_secure_token_2026";
+      try {
+        const tokenRes = await fetch("/api/postback-token");
+        if (tokenRes.ok) {
+          const data = await tokenRes.json();
+          token = data.token;
+        }
+      } catch (e) {
+        console.error("Failed to fetch postback token, using fallback", e);
+      }
+      
+      const payoutVal = offer.payout ?? offer.commission ?? 0;
       // Hit postback node to register conversion
-      const res = await fetch(`/postback?payout=${offer.payout}&articleId=${art.id}&source=${testSource}`);
+      const res = await fetch(`/api/postback?payout=${payoutVal}&articleId=${art.id}&source=${testSource}&token=${token}`);
       if (res.ok) {
-        setSimulationMsg(`Success! $${offer.payout.toFixed(2)} payout posted to Article ID "${art.id}".`);
+        setSimulationMsg(`Success! $${payoutVal.toFixed(2)} payout posted to Article ID "${art.id}".`);
         onRefresh();
       } else {
         setSimulationMsg("Postback server rejected ping.");
@@ -114,10 +126,10 @@ export default function MonetizationView({ offers, articles, onRefresh }: Moneti
                       </span>
                     </td>
                     <td className="py-3 px-3 text-center text-white/50 font-medium">
-                      {offer.vertical}
+                      {offer.vertical || offer.category}
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-emerald-600 font-bold">
-                      ${offer.payout.toFixed(2)}
+                      ${(offer.payout ?? offer.commission ?? 0).toFixed(2)}
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-white/70 font-semibold">
                       ${offer.epc.toFixed(2)} EPC
@@ -223,7 +235,7 @@ export default function MonetizationView({ offers, articles, onRefresh }: Moneti
                   How conversions work:
                 </div>
                 <p className="text-white/50">
-                  The system tracks visitors using custom server-side routes. A link click directs the user to our Express gateway <code className="text-[#22c55e] font-mono font-bold">/redirect</code>. If a purchase follows, the advertiser’s server triggers our postback node <code className="text-emerald-600 font-mono font-bold">/postback</code>, which logs conversions directly in our database.
+                  The system tracks visitors using custom server-side routes. A link click directs the user to our Express gateway <code className="text-[#22c55e] font-mono font-bold">/api/redirect</code>. If a purchase follows, the advertiser’s server triggers our postback node <code className="text-emerald-600 font-mono font-bold">/api/postback</code>, which logs conversions directly in our database.
                 </p>
               </div>
 

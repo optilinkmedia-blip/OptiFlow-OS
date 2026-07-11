@@ -1,13 +1,48 @@
 import { SeedKeyword, ExpandedKeyword, Article, Pin, AffiliateOffer, LogMessage, CeoDecision, QueueItem } from "../types";
 
+async function getJson<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Request to ${url} failed (${res.status}): ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
 export async function fetchHealth(): Promise<{ status: string; mode: string }> {
-  const res = await fetch("/api/health");
+  return getJson<{ status: string; mode: string }>("/api/health");
+}
+
+export async function fetchSeoConfig(): Promise<{ siteTitle: string; siteDescription: string }> {
+  return getJson<{ siteTitle: string; siteDescription: string }>("/api/seo");
+}
+
+export async function updateSeoConfig(config: { siteTitle: string; siteDescription: string }): Promise<void> {
+  const res = await fetch("/api/seo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to update SEO config");
+  }
+}
+
+export async function generateSeoConfig(): Promise<{ siteTitle: string; siteDescription: string }> {
+  const res = await fetch("/api/seo/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to generate SEO config with AI");
+  }
   return res.json();
 }
 
 export async function fetchSeeds(): Promise<SeedKeyword[]> {
-  const res = await fetch("/api/seeds");
-  return res.json();
+  return getJson<SeedKeyword[]>("/api/seeds");
 }
 
 export async function addSeed(keyword: string): Promise<SeedKeyword> {
@@ -17,30 +52,26 @@ export async function addSeed(keyword: string): Promise<SeedKeyword> {
     body: JSON.stringify({ keyword }),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to add seed keyword");
   }
   return res.json();
 }
 
 export async function fetchKeywords(): Promise<ExpandedKeyword[]> {
-  const res = await fetch("/api/keywords");
-  return res.json();
+  return getJson<ExpandedKeyword[]>("/api/keywords");
 }
 
 export async function fetchArticles(): Promise<Article[]> {
-  const res = await fetch("/api/articles");
-  return res.json();
+  return getJson<Article[]>("/api/articles");
 }
 
 export async function fetchPins(): Promise<Pin[]> {
-  const res = await fetch("/api/pins");
-  return res.json();
+  return getJson<Pin[]>("/api/pins");
 }
 
 export async function fetchOffers(): Promise<AffiliateOffer[]> {
-  const res = await fetch("/api/offers");
-  return res.json();
+  return getJson<AffiliateOffer[]>("/api/offers");
 }
 
 export async function addOffer(offer: Omit<AffiliateOffer, "id">): Promise<AffiliateOffer> {
@@ -50,15 +81,14 @@ export async function addOffer(offer: Omit<AffiliateOffer, "id">): Promise<Affil
     body: JSON.stringify(offer),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to add affiliate offer");
   }
   return res.json();
 }
 
 export async function fetchLogs(): Promise<LogMessage[]> {
-  const res = await fetch("/api/logs");
-  return res.json();
+  return getJson<LogMessage[]>("/api/logs");
 }
 
 export async function fetchStats(): Promise<{
@@ -74,13 +104,11 @@ export async function fetchStats(): Promise<{
   realtime: any[];
   events: any[];
 }> {
-  const res = await fetch("/api/stats");
-  return res.json();
+  return getJson<any>("/api/stats");
 }
 
 export async function fetchQueue(): Promise<QueueItem[]> {
-  const res = await fetch("/api/queue");
-  return res.json();
+  return getJson<QueueItem[]>("/api/queue");
 }
 
 export async function processQueueStep(): Promise<{ status: string; message?: string; item?: QueueItem }> {
@@ -101,15 +129,14 @@ export async function triggerManualCycle(): Promise<{ success: boolean; message:
 export async function runCeoOptimizer(): Promise<CeoDecision> {
   const res = await fetch("/api/ceo-run", { method: "POST" });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to execute AI CEO Optimizer");
   }
   return res.json();
 }
 
 export async function fetchIntegrations(): Promise<any[]> {
-  const res = await fetch("/api/integrations");
-  return res.json();
+  return getJson<any[]>("/api/integrations");
 }
 
 export async function updateIntegration(
@@ -123,7 +150,7 @@ export async function updateIntegration(
     body: JSON.stringify({ id, apiKey, additionalConfig })
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to update integration");
   }
   return res.json();
@@ -133,14 +160,14 @@ export async function testIntegration(
   id: string,
   apiKey: string,
   additionalConfig?: Record<string, string>
-): Promise<{ success: boolean; error?: string; status: string }> {
+): Promise<{ success: boolean; error?: string; status: string; transient?: boolean }> {
   const res = await fetch("/api/integrations/test", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, apiKey, additionalConfig })
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to test integration");
   }
   return res.json();

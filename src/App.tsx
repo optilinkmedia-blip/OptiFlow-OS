@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { AlertCircle, BrainCircuit, RefreshCw, Sparkles } from "lucide-react";
+import { AlertCircle, BrainCircuit, RefreshCw, Sparkles, X } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import Sidebar from "./components/Sidebar";
 import DashboardView from "./components/DashboardView";
 import SeedsView from "./components/SeedsView";
@@ -9,7 +10,11 @@ import DistributionView from "./components/DistributionView";
 import MonetizationView from "./components/MonetizationView";
 import CeoView from "./components/CeoView";
 import IntegrationsView from "./components/IntegrationsView";
+import SeoView from "./components/SeoView";
 import LandingPageView from "./components/LandingPageView";
+import ShopView from "./components/ShopView";
+import IncomeView from "./components/IncomeView";
+import PromoteView from "./components/PromoteView";
 
 import {
   fetchHealth,
@@ -341,6 +346,35 @@ export default function App() {
         return (
           <IntegrationsView />
         );
+      case "seo":
+        return (
+          <SeoView />
+        );
+      case "shop":
+        return (
+          <ShopView
+            offers={offers}
+            articles={articles}
+            onRefresh={synchronizeDatabaseState}
+          />
+        );
+      case "income":
+        return (
+          <IncomeView
+            stats={stats}
+            events={events}
+            offers={offers}
+            onRefresh={synchronizeDatabaseState}
+          />
+        );
+      case "promote":
+        return (
+          <PromoteView
+            articles={articles}
+            offers={offers}
+            onRefresh={synchronizeDatabaseState}
+          />
+        );
       default:
         return (
           <div className="text-white/40 py-12">
@@ -384,7 +418,7 @@ export default function App() {
              <input 
                type="text" 
                placeholder="Search anything..." 
-               className="w-full bg-[#18181b] text-zinc-200 text-sm rounded-full pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition border border-white/5 placeholder:text-zinc-500 shadow-sm" 
+               className="w-full bg-[#18181b] text-zinc-200 text-sm rounded-full pl-10 pr-10 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition border border-white/5 placeholder:text-zinc-500 shadow-sm" 
                value={searchQuery}
                onChange={(e) => {
                  setSearchQuery(e.target.value);
@@ -393,6 +427,16 @@ export default function App() {
                  }
                }}
              />
+             {searchQuery && (
+               <button
+                 type="button"
+                 onClick={() => setSearchQuery("")}
+                 className="absolute inset-y-0 right-0 pr-4 flex items-center text-zinc-500 hover:text-zinc-300 transition cursor-pointer"
+                 title="Clear search query"
+               >
+                 <X className="h-4 w-4" />
+               </button>
+             )}
           </div>
 
           {/* System Health Status Indicator */}
@@ -451,7 +495,18 @@ export default function App() {
         <main className="flex-1 p-8 md:p-12 max-w-7xl mx-auto w-full select-none my-6 bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-[2.5rem] shadow-2xl relative flex flex-col">
           <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent rounded-[2.5rem] pointer-events-none"></div>
           <div className="relative z-10 flex-1 flex flex-col">
-            {renderTabContent()}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className="flex-1 flex flex-col"
+              >
+                {renderTabContent()}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>

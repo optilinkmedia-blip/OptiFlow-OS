@@ -229,32 +229,59 @@ export default function Sidebar({
                <span>API Integrations</span>
             </div>
           </button>
+          <button onClick={() => onTabChange("seo")} className={`w-full px-3 flex items-center justify-between text-sm font-medium transition cursor-pointer py-2 focus:outline-none rounded-md ${
+            currentTab === "seo" ? "bg-[#18181b] text-zinc-100" : "text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b]/50"
+          }`}>
+            <div className="flex items-center gap-3">
+               <Globe className="h-4 w-4" />
+               <span>SEO Config</span>
+            </div>
+          </button>
         </div>
 
         {/* Shop */}
         <div className="space-y-1">
-          <div className="px-3 rounded-md flex items-center gap-3 text-sm font-medium text-zinc-400 cursor-pointer hover:text-zinc-100 hover:bg-[#18181b]/50 py-2">
+          <button
+            onClick={() => onTabChange("shop")}
+            className={`w-full px-3 flex items-center justify-between text-sm font-medium transition cursor-pointer py-2 focus:outline-none rounded-md ${
+              currentTab === "shop" ? "bg-[#18181b] text-zinc-100 font-semibold" : "text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b]/50"
+            }`}
+          >
+            <div className="flex items-center gap-3">
                <List className="h-4 w-4" />
                <span>Shop</span>
-          </div>
+            </div>
+          </button>
         </div>
 
         {/* Income */}
         <div className="space-y-1">
-          <div className="px-3 rounded-md flex items-center justify-between text-sm font-medium text-zinc-400 cursor-pointer hover:text-zinc-100 hover:bg-[#18181b]/50 py-2">
+          <button
+            onClick={() => onTabChange("income")}
+            className={`w-full px-3 flex items-center justify-between text-sm font-medium transition cursor-pointer py-2 focus:outline-none rounded-md ${
+              currentTab === "income" ? "bg-[#18181b] text-zinc-100 font-semibold" : "text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b]/50"
+            }`}
+          >
             <div className="flex items-center gap-3">
                <DollarSign className="h-4 w-4" />
                <span>Income</span>
             </div>
-          </div>
+          </button>
         </div>
         
         {/* Promote */}
         <div className="space-y-1">
-          <div className="px-3 rounded-md flex items-center gap-3 text-sm font-medium text-zinc-400 cursor-pointer hover:text-zinc-100 hover:bg-[#18181b]/50 py-2">
+          <button
+            onClick={() => onTabChange("promote")}
+            className={`w-full px-3 flex items-center justify-between text-sm font-medium transition cursor-pointer py-2 focus:outline-none rounded-md ${
+              currentTab === "promote" ? "bg-[#18181b] text-zinc-100 font-semibold" : "text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b]/50"
+            }`}
+          >
+            <div className="flex items-center gap-3">
                <Activity className="h-4 w-4" />
                <span>Promote</span>
-          </div>
+            </div>
+          </button>
         </div>
 
       </nav>
@@ -282,6 +309,13 @@ export default function Sidebar({
          <div className="flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b]/50 transition">
             <MessageSquare className="h-4 w-4" />
             <span className="text-sm font-medium">Feedback</span>
+         </div>
+
+         {/* Legal Compliance Footer Links */}
+         <div className="border-t border-white/5 pt-2 px-3 flex items-center justify-between text-[10px] text-zinc-500 font-medium">
+           <a href="#privacy" className="hover:text-zinc-300 hover:underline transition">Privacy Policy</a>
+           <span className="text-white/10">•</span>
+           <a href="#terms" className="hover:text-zinc-300 hover:underline transition">Terms of Service</a>
          </div>
       </div>
     </aside>

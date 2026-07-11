@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Copy, Plus, Search, Sparkles, Sprout, TrendingUp, Activity, AlertTriangle, Compass, DollarSign, Flame, Globe, Heart, Award, Check } from "lucide-react";
+import { Copy, Plus, Search, Sparkles, Sprout, TrendingUp, Activity, AlertTriangle, Compass, DollarSign, Flame, Globe, Heart, Award, Check, Download } from "lucide-react";
 import { ExpandedKeyword, SeedKeyword } from "../types";
 
 interface SeedsViewProps {
@@ -37,6 +37,33 @@ export default function SeedsView({
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     // Silent confirmation
+  };
+
+  const handleDownloadCsv = () => {
+    if (filteredKeywords.length === 0) return;
+    
+    const headers = ["Opportunity Keyword", "Intent Level", "Search Volume", "CPC Avg", "Difficulty"];
+    const rows = filteredKeywords.map(kw => [
+      `"${kw.keyword.replace(/"/g, '""')}"`,
+      kw.type,
+      kw.searchVolume || 0,
+      kw.cpc || 0,
+      kw.difficulty
+    ]);
+    
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `keywords_export_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -366,14 +393,25 @@ export default function SeedsView({
                 {currentSeed ? `Showing ${filteredKeywords.length} keywords expanded from seed` : `Programmatic index of all ${filteredKeywords.length} long-tail targets`}
               </p>
             </div>
-            {selectedSeedId && (
-              <button
-                onClick={() => setSelectedSeedId(null)}
-                className="text-xs text-[#22c55e] hover:text-[#22c55e] font-bold hover:underline text-left self-start cursor-pointer"
-              >
-                Clear Filter
-              </button>
-            )}
+            <div className="flex items-center gap-3 self-start sm:self-auto">
+              {selectedSeedId && (
+                <button
+                  onClick={() => setSelectedSeedId(null)}
+                  className="text-xs text-[#22c55e] hover:text-[#22c55e] font-bold hover:underline text-left cursor-pointer"
+                >
+                  Clear Filter
+                </button>
+              )}
+              {filteredKeywords.length > 0 && (
+                <button
+                  onClick={handleDownloadCsv}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#2b2a31] hover:bg-white/10 text-zinc-200 border border-white/5 transition cursor-pointer"
+                >
+                  <Download className="h-3.5 w-3.5 text-emerald-500" />
+                  <span>Download CSV</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Expanded Keyword list rows */}

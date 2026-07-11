@@ -1,6 +1,7 @@
 import React from "react";
 import { ArrowUpRight, Flame, ShoppingCart, Activity, Download, FileText, Share2, Tag, SearchX } from "lucide-react";
 import { Article, Pin, RevenueEvent, RevenueStats, SeedKeyword } from "../types";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 function Sparkline({ data, color = "#10b981", height = 36 }: { data: number[], color?: string, height?: number }) {
   if (!data || data.length < 2) return null;
@@ -65,6 +66,36 @@ interface DashboardViewProps {
   searchQuery?: string;
 }
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 p-3 rounded-xl shadow-2xl text-xs font-mono min-w-[160px] select-none pointer-events-none transition-all">
+        <div className="border-b border-white/5 pb-1.5 mb-2">
+          <p className="text-zinc-400 font-medium">{data.date}</p>
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-1.5 text-zinc-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Revenue
+            </span>
+            <span className="text-emerald-400 font-bold">${data.revenue.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-1.5 text-zinc-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+              Clicks
+            </span>
+            <span className="text-sky-400 font-medium">{data.clicks}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function DashboardView({
   stats,
   realtime,
@@ -92,6 +123,16 @@ export default function DashboardView({
   const revenuePoints = stats.recentRevenue?.length > 0 ? stats.recentRevenue : [0, 0, 0, 0, 0, 0, 0];
   const maxRevenue = Math.max(...revenuePoints, 10);
   const chartHeight = 120;
+
+  // Format data for Recharts Line Chart
+  const chartData = (stats.recentRevenue || []).map((revenue, index) => {
+    const rawDate = stats.dates?.[index] || `Day ${index + 1}`;
+    return {
+      date: rawDate,
+      revenue: parseFloat(revenue.toFixed(2)),
+      clicks: stats.recentClicks?.[index] || 0,
+    };
+  });
   
   // Calculate percentage of mobile (we map this to SEO vs Pinterest traffic approx)
   const totalPinterest = events.filter(e => e.source === 'pinterest').length;
@@ -102,6 +143,25 @@ export default function DashboardView({
   // Search filtering logic
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const isSearching = normalizedQuery.length > 0;
+
+  const highlightText = (text: string, highlight: string) => {
+    if (!text) return "";
+    if (!highlight || highlight.trim() === "") return <span>{text}</span>;
+    const parts = text.split(new RegExp(`(${highlight.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, "gi"));
+    return (
+      <span>
+        {parts.map((part, index) => 
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <mark key={index} className="bg-emerald-500/20 text-emerald-400 px-0.5 rounded font-semibold border border-emerald-500/30">
+              {part}
+            </mark>
+          ) : (
+            <span key={index}>{part}</span>
+          )
+        )}
+      </span>
+    );
+  };
 
   const filteredSeeds = isSearching ? seeds.filter(s => s.keyword.toLowerCase().includes(normalizedQuery)) : [];
   const filteredArticles = isSearching ? articles.filter(a => a.title.toLowerCase().includes(normalizedQuery) || a.keyword.toLowerCase().includes(normalizedQuery)) : [];
@@ -130,7 +190,7 @@ export default function DashboardView({
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredSeeds.map(seed => (
                     <div key={seed.id} className="bg-[#18181b] border border-white/5 p-4 rounded-xl shadow-sm">
-                      <div className="font-semibold text-zinc-100 mb-1">{seed.keyword}</div>
+                      <div className="font-semibold text-zinc-100 mb-1">{highlightText(seed.keyword, searchQuery)}</div>
                       <div className="text-xs text-zinc-500 font-mono">Keywords: {seed.keywordCount} • Articles: {seed.articleCount} • Rev: ${seed.revenue.toFixed(2)}</div>
                     </div>
                   ))}
@@ -144,8 +204,8 @@ export default function DashboardView({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {filteredArticles.map(article => (
                     <div key={article.id} className="bg-[#18181b] border border-white/5 p-4 rounded-xl shadow-sm">
-                      <div className="font-semibold text-zinc-100 mb-1 truncate">{article.title}</div>
-                      <div className="text-xs text-zinc-500 truncate">{article.keyword}</div>
+                      <div className="font-semibold text-zinc-100 mb-1 truncate">{highlightText(article.title, searchQuery)}</div>
+                      <div className="text-xs text-zinc-500 truncate">{highlightText(article.keyword, searchQuery)}</div>
                     </div>
                   ))}
                 </div>
@@ -166,7 +226,7 @@ export default function DashboardView({
                         </div>
                       )}
                       <div className="min-w-0">
-                        <div className="font-semibold text-zinc-100 mb-1 truncate text-sm">{pin.title}</div>
+                        <div className="font-semibold text-zinc-100 mb-1 truncate text-sm">{highlightText(pin.title, searchQuery)}</div>
                         <div className="text-xs text-zinc-500 font-mono capitalize">{pin.published ? "Published" : "Draft"}</div>
                       </div>
                     </div>
@@ -278,47 +338,62 @@ export default function DashboardView({
              </div>
           </div>
 
-          {/* Product View Barchart */}
+          {/* Revenue view (Recharts Line Chart) */}
           <div className="bg-[#18181b] rounded-2xl p-6 relative overflow-hidden border border-white/5 shadow-sm">
-             <div className="flex justify-between items-center mb-8 text-sm">
-                <h2 className="text-zinc-100 font-medium tracking-tight">Revenue view</h2>
+             <div className="flex justify-between items-center mb-6 text-sm">
+                <div>
+                  <h2 className="text-zinc-100 font-medium tracking-tight">Revenue Trends</h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">Daily gross revenue and traffic trajectory.</p>
+                </div>
                 <div className="bg-[#09090b] border border-white/5 text-zinc-400 px-3 py-1.5 rounded-full text-[11px] flex items-center gap-1.5 cursor-pointer hover:text-zinc-100 transition shadow-sm">
-                  Last 7 days
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                   Last 7 days
+                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </div>
              </div>
 
-             <div className="flex flex-col relative h-[180px]">
-                <div className="absolute top-10 left-0">
-                  <h3 className="text-3xl font-bold tracking-tight text-zinc-100">${(stats.totalRevenue > 0 ? stats.totalRevenue : 0).toFixed(2)}</h3>
-                  <div className="flex items-center gap-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold w-fit mt-3">
-                     <ArrowUpRight className="h-3 w-3" />
-                     +{stats.totalRevenue > 0 ? '36.8' : '0.0'}% <span className="text-emerald-500/60 font-normal">vs last month</span>
-                  </div>
+             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
+                <div className="md:col-span-1">
+                   <span className="text-xs text-zinc-500 block mb-1">Total Gross Revenue</span>
+                   <h3 className="text-3xl font-bold tracking-tight text-zinc-100">${(stats.totalRevenue > 0 ? stats.totalRevenue : 0).toFixed(2)}</h3>
+                   <div className="flex items-center gap-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold w-fit mt-3">
+                      <ArrowUpRight className="h-3 w-3" />
+                      +{stats.totalRevenue > 0 ? '36.8' : '0.0'}% <span className="text-emerald-500/60 font-normal">vs last week</span>
+                   </div>
                 </div>
 
-                {/* Right side bars */}
-                <div className="absolute right-0 bottom-0 top-0 flex items-end gap-3 w-1/2 justify-end pt-8">
-                  {revenuePoints.slice(-6).map((val, idx) => {
-                    const isActive = idx === revenuePoints.slice(-6).length - 1 && val > 0; 
-                    const height = maxRevenue === 0 ? 20 : (val / maxRevenue) * chartHeight;
-                    const minHeight = Math.max(height, 20); // minimum visual height
-                    const displayVal = val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val.toFixed(1);
-                    return (
-                      <div key={idx} className="flex flex-col items-center gap-2 group w-full">
-                        {isActive && (
-                           <div className="bg-[#09090b] text-xs text-zinc-100 px-2 py-0.5 rounded-full shadow-lg border border-white/10 relative -top-2">
-                             ${displayVal}
-                           </div>
-                        )}
-                        <div 
-                          className={`w-full rounded-t-lg transition-all duration-300 ${isActive ? 'bg-emerald-500' : 'bg-[#27272a]'}`} 
-                          style={{ height: `${minHeight}px` }} 
-                        />
-                        <span className="text-[10px] text-zinc-500">{stats.dates?.[stats.dates.length - 6 + idx]?.split(' ')[1] || (idx + 14)}</span>
-                      </div>
-                    )
-                  })}
+                <div className="md:col-span-3 h-[200px] w-full" id="revenue-line-chart-container">
+                   <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />
+                         <XAxis 
+                            dataKey="date" 
+                            stroke="#71717a" 
+                            fontSize={10} 
+                            tickLine={false} 
+                            axisLine={false} 
+                            dy={10}
+                         />
+                         <YAxis 
+                            stroke="#71717a" 
+                            fontSize={10} 
+                            tickLine={false} 
+                            axisLine={false}
+                            tickFormatter={(v) => `$${v}`}
+                         />
+                         <Tooltip 
+                            content={<CustomTooltip />} 
+                            cursor={{ stroke: "#27272a", strokeWidth: 1, strokeDasharray: "4 4" }}
+                         />
+                         <Line 
+                            type="monotone" 
+                            dataKey="revenue" 
+                            stroke="#10b981" 
+                            strokeWidth={2} 
+                            dot={{ r: 3, strokeWidth: 1, stroke: "#10b981", fill: "#18181b" }}
+                            activeDot={{ r: 5, strokeWidth: 1, fill: "#10b981" }}
+                         />
+                      </LineChart>
+                   </ResponsiveContainer>
                 </div>
              </div>
           </div>

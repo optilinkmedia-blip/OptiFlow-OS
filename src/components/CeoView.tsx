@@ -115,115 +115,143 @@ export default function CeoView({ decisions, onTriggerCeoRun, onRefresh, article
                 </p>
               </div>
             ) : (
-              decisions.map((dec, idx) => (
-                <div key={dec.id || idx} className="rounded-lg border border-white/5 bg-slate-5/30 p-4 space-y-3.5 animate-fadeIn">
-                  
-                  {/* Title Stamp */}
-                  <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-5 w-5 items-center justify-center rounded bg-[#22c55e]/10 text-[9px] font-mono font-bold text-[#22c55e] border border-[#22c55e]/20">
-                        AUD
+              <div className="relative border-l border-white/10 ml-3 pl-5 space-y-6 pb-4 pt-2">
+                {decisions.map((dec, idx) => {
+                  const statusColors = {
+                    active: "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]",
+                    completed: "bg-sky-500",
+                    failed: "bg-rose-500"
+                  };
+                  const statusColor = statusColors[dec.status || 'completed'] || statusColors.completed;
+
+                  return (
+                    <div key={dec.id || idx} className="relative animate-fadeIn">
+                      {/* Timeline Dot */}
+                      <div className={`absolute -left-[25px] top-4 h-2.5 w-2.5 rounded-full ${statusColor} ring-4 ring-[#1f1e24]`} />
+                      
+                      <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4 space-y-3.5">
+                        
+                        {/* Title Stamp */}
+                        <div className="flex flex-col gap-2 border-b border-white/5 pb-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-5 w-5 items-center justify-center rounded bg-white/5 text-[9px] font-mono font-bold text-white/70 border border-white/10">
+                                AUD
+                              </div>
+                              <span className="text-[11px] font-bold text-white/90 font-sans">AI DECISION ACTION BLOCK</span>
+                            </div>
+                            <span className="text-[10px] text-white/40 font-mono">
+                              {new Date(dec.createdAt).toLocaleDateString()} {new Date(dec.createdAt).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] uppercase tracking-wider font-mono text-white/50">Status:</span>
+                            <span className={`text-[9px] uppercase tracking-wider font-mono font-bold ${
+                              dec.status === 'active' ? 'text-emerald-400' :
+                              dec.status === 'failed' ? 'text-rose-400' :
+                              'text-sky-400'
+                            }`}>
+                              {dec.status || 'completed'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Core Actions items */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          
+                          {/* Winners to Scale vs Stops */}
+                          <div className="space-y-3.5">
+                            
+                            {/* Scale */}
+                            {dec.scale && dec.scale.length > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-[9px] uppercase tracking-wider font-mono text-emerald-600 inline-flex items-center gap-1 font-bold">
+                                  <TrendingUp className="h-3 w-3" />
+                                  SCALE WINNERS (Boost Traffic)
+                                </span>
+                                <div className="space-y-1">
+                                  {dec.scale.map((sc, scIdx) => (
+                                    <p key={scIdx} className="text-[11px] text-white/70 font-medium font-sans">
+                                      • {sc}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Stops */}
+                            {dec.stop && dec.stop.length > 0 && (
+                              <div className="space-y-1 pt-1">
+                                <span className="text-[9px] uppercase tracking-wider font-mono text-rose-400 font-bold inline-flex items-center gap-1">
+                                  <AlertTriangle className="h-3 w-3" /> STOP OPERATION (Underperforming)
+                                </span>
+                                <div className="space-y-1">
+                                  {dec.stop.map((st, stIdx) => (
+                                    <p key={stIdx} className="text-[11px] text-white/70 font-medium font-sans">
+                                      • {st}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Rewrites & Brand new keywords launched */}
+                          <div className="space-y-3.5">
+                            
+                            {/* Rewrites */}
+                            {dec.rewrite && dec.rewrite.length > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-[9px] uppercase tracking-wider font-mono text-amber-400 font-bold inline-flex items-center gap-1">
+                                  <PenTool className="h-3 w-3" /> REWRITE / CONVERT (Optimize CTR)
+                                </span>
+                                <div className="space-y-1">
+                                  {dec.rewrite.map((rw, rwIdx) => (
+                                    <p key={rwIdx} className="text-[11px] text-white/70 font-medium font-sans">
+                                      • {rw}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Brand New Keywords */}
+                            {dec.newKeywords && dec.newKeywords.length > 0 && (
+                              <div className="space-y-1 pt-1">
+                                <span className="text-[9px] uppercase tracking-wider font-mono text-[#22c55e] font-bold inline-flex items-center gap-1">
+                                  <Rocket className="h-3 w-3" /> AUTO-GENERATED KEYWORDS EXPANDED
+                                </span>
+                                <div className="space-y-1">
+                                  {dec.newKeywords.map((nk, nkIdx) => (
+                                    <p key={nkIdx} className="text-[11px] text-white/70 font-medium font-mono">
+                                      &gt; {nk}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                        </div>
+
+                        {/* Systemic tactical instructions list */}
+                        <div className="border-t border-white/5 pt-3 space-y-2">
+                          <span className="text-[9px] uppercase tracking-wider font-mono text-white/40 font-bold flex items-center gap-1.5">
+                            <CheckSquare className="h-3.5 w-3.5 text-[#22c55e]" />
+                            Active Operational Directives (Automated hand-off)
+                          </span>
+                          <ul className="list-disc list-inside text-[11px] text-white/70 space-y-1.5 pl-1 font-sans leading-relaxed">
+                            {dec.actions?.map((act, actIdx) => (
+                              <li key={actIdx} className="leading-relaxed">{act}</li>
+                            ))}
+                          </ul>
+                        </div>
+
                       </div>
-                      <span className="text-[11px] font-bold text-white/70 font-sans">AI DECISION ACTION BLOCK</span>
                     </div>
-                    <span className="text-[10px] text-white/40 font-mono">
-                      {new Date(dec.createdAt).toLocaleDateString()} {new Date(dec.createdAt).toLocaleTimeString()}
-                    </span>
-                  </div>
-
-                  {/* Core Actions items */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    
-                    {/* Winners to Scale vs Stops */}
-                    <div className="space-y-3.5">
-                      
-                      {/* Scale */}
-                      {dec.scale && dec.scale.length > 0 && (
-                        <div className="space-y-1">
-                          <span className="text-[9px] uppercase tracking-wider font-mono text-emerald-600 inline-flex items-center gap-1 font-bold">
-                            <TrendingUp className="h-3 w-3" />
-                            SCALE WINNERS (Boost Traffic)
-                          </span>
-                          <div className="space-y-1">
-                            {dec.scale.map((sc, scIdx) => (
-                              <p key={scIdx} className="text-[11px] text-white/70 font-medium font-sans">
-                                • {sc}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Stops */}
-                      {dec.stop && dec.stop.length > 0 && (
-                        <div className="space-y-1 pt-1">
-                          <span className="text-[9px] uppercase tracking-wider font-mono text-rose-400 font-bold inline-flex items-center gap-1">
-                            <AlertTriangle className="h-3 w-3" /> STOP OPERATION (Underperforming)
-                          </span>
-                          <div className="space-y-1">
-                            {dec.stop.map((st, stIdx) => (
-                              <p key={stIdx} className="text-[11px] text-white/70 font-medium font-sans">
-                                • {st}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Rewrites & Brand new keywords launched */}
-                    <div className="space-y-3.5">
-                      
-                      {/* Rewrites */}
-                      {dec.rewrite && dec.rewrite.length > 0 && (
-                        <div className="space-y-1">
-                          <span className="text-[9px] uppercase tracking-wider font-mono text-amber-400 font-bold inline-flex items-center gap-1">
-                            <PenTool className="h-3 w-3" /> REWRITE / CONVERT (Optimize CTR)
-                          </span>
-                          <div className="space-y-1">
-                            {dec.rewrite.map((rw, rwIdx) => (
-                              <p key={rwIdx} className="text-[11px] text-white/70 font-medium font-sans">
-                                • {rw}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Brand New Keywords */}
-                      {dec.newKeywords && dec.newKeywords.length > 0 && (
-                        <div className="space-y-1 pt-1">
-                          <span className="text-[9px] uppercase tracking-wider font-mono text-[#22c55e] font-bold inline-flex items-center gap-1">
-                            <Rocket className="h-3 w-3" /> AUTO-GENERATED KEYWORDS EXPANDED
-                          </span>
-                          <div className="space-y-1">
-                            {dec.newKeywords.map((nk, nkIdx) => (
-                              <p key={nkIdx} className="text-[11px] text-white/70 font-medium font-mono">
-                                &gt; {nk}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-
-                  {/* Systemic tactical instructions list */}
-                  <div className="border-t border-white/5 pt-3 space-y-2">
-                    <span className="text-[9px] uppercase tracking-wider font-mono text-white/40 font-bold flex items-center gap-1.5">
-                      <CheckSquare className="h-3.5 w-3.5 text-[#22c55e]" />
-                      Active Operational Directives (Automated hand-off)
-                    </span>
-                    <ul className="list-disc list-inside text-[11px] text-white/70 space-y-1.5 pl-1 font-sans leading-relaxed">
-                      {dec.actions?.map((act, actIdx) => (
-                        <li key={actIdx} className="leading-relaxed">{act}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                </div>
-              ))
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

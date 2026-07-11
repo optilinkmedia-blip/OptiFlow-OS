@@ -21,7 +21,12 @@ import {
   EyeOff,
   Search,
   Plus,
-  X
+  X,
+  Download,
+  Copy,
+  Check,
+  Terminal,
+  Code
 } from "lucide-react";
 import { fetchIntegrations, updateIntegration, testIntegration } from "../lib/api";
 
@@ -59,6 +64,81 @@ export default function IntegrationsView() {
   const [newApiUrl, setNewApiUrl] = useState("");
   const [newApiError, setNewApiError] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+
+  // Deployment and Report state
+  const [activeSubTab, setActiveSubTab] = useState<"credentials" | "deployment">("credentials");
+  const [articles, setArticles] = useState<any[]>([]);
+  const [loadingArticles, setLoadingArticles] = useState(false);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  const handleCopyText = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(label);
+    setTimeout(() => setCopiedText(null), 2000);
+  };
+
+  const loadArticles = async () => {
+    try {
+      setLoadingArticles(true);
+      const res = await fetch("/api/articles");
+      if (res.ok) {
+        const data = await res.json();
+        setArticles(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch articles:", err);
+    } finally {
+      setLoadingArticles(false);
+    }
+  };
+
+  const handleDownloadCsv = () => {
+    if (articles.length === 0) {
+      alert("No articles available in database to export.");
+      return;
+    }
+
+    const headers = [
+      "ID",
+      "Title",
+      "Keyword",
+      "Status",
+      "Clicks",
+      "Conversions",
+      "Revenue ($)",
+      "EPC ($)",
+      "Created At",
+      "Meta Description"
+    ];
+
+    const rows = articles.map(art => [
+      art.id,
+      `"${(art.title || "").replace(/"/g, '""')}"`,
+      `"${(art.keyword || "").replace(/"/g, '""')}"`,
+      art.status || "draft",
+      art.clicks || 0,
+      art.conversions || 0,
+      (art.revenue || 0).toFixed(2),
+      (art.epc || 0).toFixed(2),
+      new Date(art.createdAt || Date.now()).toISOString(),
+      `"${(art.metaDescription || "").replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(e => e.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `optiflow_performance_report_${Date.now()}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleRegisterCustomApi = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +219,7 @@ export default function IntegrationsView() {
 
   useEffect(() => {
     loadData();
+    loadArticles();
   }, []);
 
   const handleKeyChange = (id: string, value: string) => {
@@ -200,12 +281,19 @@ export default function IntegrationsView() {
       const updated = await fetchIntegrations();
       setIntegrations(updated);
 
+      let message = "";
+      if (res.success) {
+        message = "Connection test succeeded! This API integration is fully operational.";
+      } else if (res.transient) {
+        message = `Transient issue: ${res.error}`;
+      } else {
+        message = `Connection failed: ${res.error || "Unknown authentication error."}`;
+      }
+
       setTestResult({
         id,
-        success: res.success,
-        message: res.success 
-          ? "Connection test succeeded! This API integration is fully operational." 
-          : `Connection failed: ${res.error || "Unknown authentication error."}`
+        success: res.success || !!res.transient,
+        message
       });
     } catch (err: any) {
       setTestResult({
@@ -222,6 +310,10 @@ export default function IntegrationsView() {
     switch (id) {
       case "gemini":
         return <BrainCircuit className="h-5 w-5 text-emerald-500" />;
+      case "openai":
+        return <BrainCircuit className="h-5 w-5 text-teal-500" />;
+      case "anthropic":
+        return <BrainCircuit className="h-5 w-5 text-orange-400" />;
       case "apify":
         return <Network className="h-5 w-5 text-indigo-400" />;
       case "pinterest":
@@ -289,13 +381,43 @@ export default function IntegrationsView() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 text-zinc-500 space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
-          <p className="text-sm font-mono tracking-widest uppercase text-zinc-500">Checking system links...</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Sub-tab navigation */}
+      <div className="flex border-b border-white/5 pb-0.5">
+        <button
+          onClick={() => setActiveSubTab("credentials")}
+          className={`px-5 pb-3 text-sm font-semibold border-b-2 transition cursor-pointer flex items-center gap-2 ${
+            activeSubTab === "credentials"
+              ? "border-emerald-500 text-emerald-400 font-bold"
+              : "border-transparent text-zinc-400 hover:text-white"
+          }`}
+        >
+          <Settings2 className="h-4 w-4" />
+          API Credentials & Pipelines
+        </button>
+        <button
+          onClick={() => setActiveSubTab("deployment")}
+          className={`px-5 pb-3 text-sm font-semibold border-b-2 transition cursor-pointer flex items-center gap-2 ${
+            activeSubTab === "deployment"
+              ? "border-emerald-500 text-emerald-400 font-bold"
+              : "border-transparent text-zinc-400 hover:text-white"
+          }`}
+        >
+          <Terminal className="h-4 w-4" />
+          System Webhook Deployment
+          <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
+            Endpoints Active
+          </span>
+        </button>
+      </div>
+
+      {activeSubTab === "credentials" ? (
+        loading ? (
+          <div className="flex flex-col items-center justify-center py-24 text-zinc-500 space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+            <p className="text-sm font-mono tracking-widest uppercase text-zinc-500">Checking system links...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Left list pane (5 columns) */}
           <div className="lg:col-span-5 space-y-4">
@@ -696,6 +818,292 @@ export default function IntegrationsView() {
           </div>
 
         </div>
+        )
+      ) : (
+        <div className="space-y-6">
+          {/* Analytics Snapshot & Export */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* Download Report Card */}
+            <div className="md:col-span-2 bg-[#121215] border border-white/5 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-emerald-500/10 transition-colors duration-500 pointer-events-none" />
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-4">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Content Metrics & Export
+                </span>
+                <h3 className="text-lg font-bold text-zinc-100">Compiled Articles Performance Ledger</h3>
+                <p className="text-sm text-zinc-400 mt-2 max-w-xl">
+                  Export your active article inventory, indexing statuses, traffic metrics, affiliate conversion ratios, and pipeline performance metrics into a standard CSV spreadsheet for direct importing into analytics tools or spreadsheets.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mt-6 pt-6 border-t border-white/5">
+                <button
+                  onClick={handleDownloadCsv}
+                  className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-semibold transition shadow-md hover:shadow-emerald-500/10 cursor-pointer"
+                >
+                  <Download className="h-4.5 w-4.5" />
+                  <span>Download Report (CSV)</span>
+                </button>
+                <button
+                  onClick={loadArticles}
+                  className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 border border-white/5 hover:bg-zinc-800 text-zinc-300 hover:text-white transition cursor-pointer"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loadingArticles ? "animate-spin" : ""}`} />
+                  <span>Reload Performance Ledger</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Performance Stats Snapshot */}
+            <div className="bg-[#121215] border border-white/5 rounded-2xl p-6 flex flex-col justify-between">
+              <div>
+                <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-500">System Inventory Stats</h4>
+                <div className="space-y-4 mt-4">
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="text-sm text-zinc-400">Total Cataloged Articles</span>
+                    <span className="font-mono text-zinc-100 font-bold">{articles.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="text-sm text-zinc-400">Aggregated Traffic Clicks</span>
+                    <span className="font-mono text-zinc-100 font-bold">
+                      {articles.reduce((acc, a) => acc + (a.clicks || 0), 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="text-sm text-zinc-400">Total Pipeline Conversions</span>
+                    <span className="font-mono text-zinc-100 font-bold">
+                      {articles.reduce((acc, a) => acc + (a.conversions || 0), 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-zinc-400">Est. Accumulated Revenue</span>
+                    <span className="font-mono text-emerald-400 font-bold">
+                      ${articles.reduce((acc, a) => acc + (a.revenue || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-[#18181b] border border-white/5 rounded-xl p-3 text-center mt-6">
+                <p className="text-[10px] font-mono text-zinc-500 uppercase">Average EPC (Earnings Per Click)</p>
+                <p className="text-lg font-bold text-zinc-200 mt-1 font-mono">
+                  ${articles.reduce((acc, a) => acc + (a.clicks || 0), 0) > 0
+                    ? (articles.reduce((acc, a) => acc + (a.revenue || 0), 0) / articles.reduce((acc, a) => acc + (a.clicks || 0), 0)).toFixed(2)
+                    : "0.00"}
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          {/* API Webhook Documentation & Testing */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Code className="h-5 w-5 text-emerald-500" />
+              <h3 className="text-lg font-bold text-zinc-100">API Webhooks & Trigger-Based Integration Hook Catalog</h3>
+            </div>
+            <p className="text-sm text-zinc-400 max-w-3xl">
+              Configure trigger actions and route data dynamically into OptiFlow from external programs or automation layers. Securely query, inject, and execute content pipeline sequences using standard JSON payloads.
+            </p>
+
+            <div className="grid grid-cols-1 gap-6">
+              
+              {/* Endpoint 1: POST /api/deploy/trigger-cycle */}
+              <div className="bg-[#121215] border border-white/5 rounded-2xl overflow-hidden shadow-lg">
+                <div className="p-6 border-b border-white/5 bg-[#18181b] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start md:items-center gap-3">
+                    <span className="px-2.5 py-1 text-xs font-bold font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
+                      POST
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-zinc-100 flex items-center gap-2 text-sm md:text-base">
+                        Trigger Content Pipeline Cycle
+                        <span className="text-[10px] font-mono text-zinc-500 font-normal">/api/deploy/trigger-cycle</span>
+                      </h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">Automate keyword discovery & copywriting pipeline trigger.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500 font-mono hidden sm:inline bg-[#0c0c0e] px-3 py-1.5 rounded border border-white/5 truncate max-w-xs md:max-w-md">
+                      {window.location.origin}/api/deploy/trigger-cycle
+                    </span>
+                    <button
+                      onClick={() => handleCopyText(`${window.location.origin}/api/deploy/trigger-cycle`, "trigger")}
+                      className="p-2 bg-[#0c0c0e] hover:bg-[#1c1c22] border border-white/5 rounded-lg text-zinc-400 hover:text-white transition flex items-center gap-1.5 text-xs font-mono cursor-pointer"
+                    >
+                      {copiedText === "trigger" ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span>{copiedText === "trigger" ? "Copied" : "Copy"}</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Schema */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Payload Schema (JSON)</span>
+                    <pre className="bg-[#0c0c0e] border border-white/5 rounded-xl p-4 font-mono text-xs text-zinc-300 overflow-x-auto">
+{`{
+  "seed": "keto baking"  // [Optional] Adds seed keyword & triggers expansion
+}`}
+                    </pre>
+                    <p className="text-xs text-zinc-500">
+                      * If no <code className="text-zinc-300">seed</code> is provided, OptiFlow triggers scheduled keyword expansion cycles for any existing unexpanded seed keywords.
+                    </p>
+                  </div>
+                  {/* Interactive Test Console */}
+                  <WebhookSimulator endpoint="/api/deploy/trigger-cycle" method="POST" placeholder='{\n  "seed": "keto baking"\n}' />
+                </div>
+              </div>
+
+              {/* Endpoint 2: POST /api/deploy/articles */}
+              <div className="bg-[#121215] border border-white/5 rounded-2xl overflow-hidden shadow-lg">
+                <div className="p-6 border-b border-white/5 bg-[#18181b] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start md:items-center gap-3">
+                    <span className="px-2.5 py-1 text-xs font-bold font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
+                      POST
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-zinc-100 flex items-center gap-2 text-sm md:text-base">
+                        Inject Custom Formulated Article
+                        <span className="text-[10px] font-mono text-zinc-500 font-normal">/api/deploy/articles</span>
+                      </h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">Manually/programmatically bypass AI writer and submit custom formatted drafts.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500 font-mono hidden sm:inline bg-[#0c0c0e] px-3 py-1.5 rounded border border-white/5 truncate max-w-xs md:max-w-md">
+                      {window.location.origin}/api/deploy/articles
+                    </span>
+                    <button
+                      onClick={() => handleCopyText(`${window.location.origin}/api/deploy/articles`, "articles_post")}
+                      className="p-2 bg-[#0c0c0e] hover:bg-[#1c1c22] border border-white/5 rounded-lg text-zinc-400 hover:text-white transition flex items-center gap-1.5 text-xs font-mono cursor-pointer"
+                    >
+                      {copiedText === "articles_post" ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span>{copiedText === "articles_post" ? "Copied" : "Copy"}</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Schema */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Payload Schema (JSON)</span>
+                    <pre className="bg-[#0c0c0e] border border-white/5 rounded-xl p-4 font-mono text-xs text-zinc-300 overflow-x-auto">
+{`{
+  "title": "Low Carb Keto Shakes",
+  "content": "## Core Recipe\\n\\n1. Avocado\\n2. Almond milk",
+  "keyword": "keto shakes",      // [Optional]
+  "status": "published",       // "draft" | "queued" | "published"
+  "metaDescription": "Yummy"   // [Optional]
+}`}
+                    </pre>
+                  </div>
+                  {/* Interactive Test Console */}
+                  <WebhookSimulator 
+                    endpoint="/api/deploy/articles" 
+                    method="POST" 
+                    placeholder='{\n  "title": "Low Carb Keto Shakes",\n  "content": "## Recipe\\n\\n- Blend ingredients",\n  "status": "published"\n}' 
+                  />
+                </div>
+              </div>
+
+              {/* Endpoint 3: GET /api/deploy/articles */}
+              <div className="bg-[#121215] border border-white/5 rounded-2xl overflow-hidden shadow-lg">
+                <div className="p-6 border-b border-white/5 bg-[#18181b] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start md:items-center gap-3">
+                    <span className="px-2.5 py-1 text-xs font-bold font-mono bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded">
+                      GET
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-zinc-100 flex items-center gap-2 text-sm md:text-base">
+                        Fetch Live Content Index
+                        <span className="text-[10px] font-mono text-zinc-500 font-normal">/api/deploy/articles</span>
+                      </h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">Retrieve active database articles list with integrated EPC metadata.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500 font-mono hidden sm:inline bg-[#0c0c0e] px-3 py-1.5 rounded border border-white/5 truncate max-w-xs md:max-w-md font-semibold">
+                      {window.location.origin}/api/deploy/articles?status=published
+                    </span>
+                    <button
+                      onClick={() => handleCopyText(`${window.location.origin}/api/deploy/articles?status=published`, "articles_get")}
+                      className="p-2 bg-[#0c0c0e] hover:bg-[#1c1c22] border border-white/5 rounded-lg text-zinc-400 hover:text-white transition flex items-center gap-1.5 text-xs font-mono cursor-pointer"
+                    >
+                      {copiedText === "articles_get" ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span>{copiedText === "articles_get" ? "Copied" : "Copy"}</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Schema */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Query Parameters</span>
+                    <div className="bg-[#0c0c0e] border border-white/5 rounded-xl p-4 space-y-2.5">
+                      <div className="flex items-start gap-2.5 text-xs">
+                        <span className="font-mono font-bold text-emerald-400">status</span>
+                        <span className="text-zinc-500 font-mono">string</span>
+                        <span className="text-zinc-400">Filter articles: <code className="text-zinc-200">draft</code> | <code className="text-zinc-200">queued</code> | <code className="text-zinc-200">published</code></span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Interactive Test Console */}
+                  <WebhookSimulator endpoint="/api/deploy/articles?status=published" method="GET" />
+                </div>
+              </div>
+
+              {/* Endpoint 4: POST /api/deploy/offers */}
+              <div className="bg-[#121215] border border-white/5 rounded-2xl overflow-hidden shadow-lg">
+                <div className="p-6 border-b border-white/5 bg-[#18181b] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start md:items-center gap-3">
+                    <span className="px-2.5 py-1 text-xs font-bold font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
+                      POST
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-zinc-100 flex items-center gap-2 text-sm md:text-base">
+                        Deploy New Affiliate Offer
+                        <span className="text-[10px] font-mono text-zinc-500 font-normal">/api/deploy/offers</span>
+                      </h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">Automate monetization linking by programmatic insertion of payout rules.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500 font-mono hidden sm:inline bg-[#0c0c0e] px-3 py-1.5 rounded border border-white/5 truncate max-w-xs md:max-w-md font-semibold">
+                      {window.location.origin}/api/deploy/offers
+                    </span>
+                    <button
+                      onClick={() => handleCopyText(`${window.location.origin}/api/deploy/offers`, "offers_post")}
+                      className="p-2 bg-[#0c0c0e] hover:bg-[#1c1c22] border border-white/5 rounded-lg text-zinc-400 hover:text-white transition flex items-center gap-1.5 text-xs font-mono cursor-pointer"
+                    >
+                      {copiedText === "offers_post" ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span>{copiedText === "offers_post" ? "Copied" : "Copy"}</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Schema */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Payload Schema (JSON)</span>
+                    <pre className="bg-[#0c0c0e] border border-white/5 rounded-xl p-4 font-mono text-xs text-zinc-300 overflow-x-auto">
+{`{
+  "name": "Super Carb blocker shake",
+  "network": "MaxBounty",         // "MaxBounty" | "ClickBank" | "ShareASale" | "SaaS"
+  "payout": 45.00,
+  "url": "https://maxb.com/off_998",
+  "vertical": "Diet & Fitness"
+}`}
+                    </pre>
+                  </div>
+                  {/* Interactive Test Console */}
+                  <WebhookSimulator 
+                    endpoint="/api/deploy/offers" 
+                    method="POST" 
+                    placeholder='{\n  "name": "Super Carb blocker shake",\n  "network": "MaxBounty",\n  "payout": 45.00,\n  "url": "https://maxb.com/off_998",\n  "vertical": "Diet & Fitness"\n}' 
+                  />
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Custom API Registration Modal */}
@@ -819,7 +1227,8 @@ export default function IntegrationsView() {
                       <Plus className="h-4 w-4" />
                       <span>Register Integration</span>
                     </>
-                  )}
+                  )
+                  }
                 </button>
               </div>
             </form>
@@ -827,6 +1236,89 @@ export default function IntegrationsView() {
         </div>
       )}
 
+    </div>
+  );
+}
+
+function WebhookSimulator({ 
+  endpoint, 
+  method, 
+  placeholder 
+}: { 
+  endpoint: string; 
+  method: "POST" | "GET"; 
+  placeholder?: string;
+}) {
+  const [payload, setPayload] = useState(placeholder || "");
+  const [response, setResponse] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(true);
+
+  const handleRunTest = async () => {
+    setTesting(true);
+    setResponse(null);
+    try {
+      const options: RequestInit = {
+        method,
+        headers: { "Content-Type": "application/json" }
+      };
+      if (method === "POST" && payload) {
+        options.body = payload;
+      }
+      
+      const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+      const res = await fetch(cleanEndpoint, options);
+      const data = await res.json();
+      setIsSuccess(res.ok);
+      setResponse(JSON.stringify(data, null, 2));
+    } catch (err: any) {
+      setIsSuccess(false);
+      setResponse(JSON.stringify({ error: "Network / execution error during simulation", message: err.message }, null, 2));
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="bg-[#0c0c0e] border border-white/5 rounded-xl p-4 flex flex-col justify-between space-y-3">
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <span className="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Test Sandbox</span>
+          <span className="text-[10px] font-mono text-zinc-500">Local Sandbox Mode</span>
+        </div>
+        {method === "POST" && (
+          <textarea
+            value={payload}
+            onChange={(e) => setPayload(e.target.value)}
+            rows={4}
+            className="w-full bg-[#121215] text-zinc-100 text-xs font-mono rounded-lg p-3 border border-white/5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition resize-none"
+            placeholder="Edit request payload body JSON..."
+          />
+        )}
+      </div>
+
+      <button
+        onClick={handleRunTest}
+        disabled={testing}
+        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white transition text-xs font-semibold disabled:opacity-50 cursor-pointer"
+      >
+        {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+        <span>{testing ? "Executing Simulated Call..." : "Execute simulated hook"}</span>
+      </button>
+
+      {response && (
+        <div className="space-y-1 mt-2 animate-fadeIn">
+          <div className="flex justify-between items-center text-[10px] font-mono">
+            <span className="text-zinc-500">Simulation Response Output</span>
+            <span className={isSuccess ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
+              {isSuccess ? "200 OK" : "Error"}
+            </span>
+          </div>
+          <pre className="max-h-48 overflow-y-auto bg-[#121215] border border-white/5 rounded-lg p-3 font-mono text-[11px] text-zinc-300 custom-scrollbar-dark">
+            {response}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }

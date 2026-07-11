@@ -1,20 +1,22 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# OptiFlow OS
 
-# Run and deploy your AI Studio app
+OptiFlow OS is an autonomous full-stack affiliate content generation engine. 
+It uses Gemini (`@google/genai`) and other optional integrations to discover keywords, generate content, and publish automatically.
 
-This contains everything you need to run your app locally.
+## Integrations Status
 
-View your app in AI Studio: https://ai.studio/apps/c50331f8-852e-40fb-8985-5af42b2616ce
+**Fully Live / Implemented:**
+- **Google Gemini**: Live (Used for generating SEO content, clusters, and images).
+- **Apify / Pinterest Scraper**: Live (Used for scraping real-time search volume and trends).
+- **WordPress**: Live (Posts articles automatically if configured with a Site URL, Username, and Application Password).
+- **Pinterest**: Live (Creates real pins on a given board ID using the Pinterest v5 API).
 
-## Run Locally
+**Simulated / Not Fully Implemented (Coming Soon):**
+- **Telegram**: Simulated. The UI implies Telegram broadcasts, but there is no real Telegram Bot API call currently made.
+- **Mailchimp**: Ping test implemented, but actual subscriber syncing or broadcasting is simulated.
+- **SEO Mastermind / RapidAPI fallback**: Ping test implemented.
 
-**Prerequisites:**  Node.js
+## Setup
 
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+See `.env.example` for required environment variables. 
+The system requires `GEMINI_API_KEY` for basic functionality.

@@ -103,6 +103,8 @@ export interface AffiliateOffer {
   epc: number;
   url: string;
   vertical: string;
+  commission?: number;
+  category?: string;
 }
 
 export interface RevenueEvent {
@@ -144,6 +146,7 @@ export interface CeoDecision {
   newKeywords: string[];
   actions: string[];
   createdAt: number;
+  status?: 'active' | 'completed' | 'failed';
 }
 
 export interface QueueItem {
