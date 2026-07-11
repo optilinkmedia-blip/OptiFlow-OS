@@ -20,8 +20,24 @@ import {
   Sun,
   Moon,
   Download,
-  BarChart3
+  BarChart3,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Filter
 } from "lucide-react";
+
+type SortKey = 'keyword' | 'rankingPosition' | 'searchVolume' | 'status';
+
+const MOCK_KEYWORD_PERFORMANCE = [
+  { id: '1', keyword: 'best affiliate programs', rankingPosition: 3, searchVolume: 12500, status: 'Stable' },
+  { id: '2', keyword: 'make money online', rankingPosition: 8, searchVolume: 45000, status: 'Rising' },
+  { id: '3', keyword: 'passive income ideas', rankingPosition: 12, searchVolume: 22000, status: 'Rising' },
+  { id: '4', keyword: 'how to start a blog', rankingPosition: 5, searchVolume: 18000, status: 'Stable' },
+  { id: '5', keyword: 'seo tips 2026', rankingPosition: 24, searchVolume: 9500, status: 'Declining' },
+  { id: '6', keyword: 'pinterest marketing', rankingPosition: 2, searchVolume: 14000, status: 'Rising' },
+  { id: '7', keyword: 'chatgpt prompts for seo', rankingPosition: 1, searchVolume: 50000, status: 'Rising' },
+];
 
 export default function SeoView() {
   const [siteTitle, setSiteTitle] = useState("");
@@ -37,6 +53,26 @@ export default function SeoView() {
   const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("dark");
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  
+  const [filterQuery, setFilterQuery] = useState("");
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: 'asc' | 'desc' }>({ key: 'searchVolume', direction: 'desc' });
+
+  const sortedAndFilteredKeywords = MOCK_KEYWORD_PERFORMANCE
+    .filter(item => item.keyword.toLowerCase().includes(filterQuery.toLowerCase()) || item.status.toLowerCase().includes(filterQuery.toLowerCase()))
+    .sort((a, b) => {
+      const isAsc = sortConfig.direction === 'asc' ? 1 : -1;
+      if (a[sortConfig.key] < b[sortConfig.key]) return -1 * isAsc;
+      if (a[sortConfig.key] > b[sortConfig.key]) return 1 * isAsc;
+      return 0;
+    });
+
+  const handleSort = (key: SortKey) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const handleDownloadCsv = async () => {
     setIsDownloading(true);
@@ -696,6 +732,117 @@ export default function SeoView() {
               />
             </AreaChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Keyword Performance Table */}
+      <div className="bg-[#121215] border border-white/5 rounded-2xl p-6 shadow-xl relative mt-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-5 border-b border-white/5 mb-6 gap-4">
+          <div className="flex items-center gap-2">
+            <Search className="h-5 w-5 text-emerald-500" />
+            <div>
+              <h2 className="text-sm font-bold text-zinc-200">Keyword Performance Explorer</h2>
+              <p className="text-xs text-zinc-500 mt-0.5">Filter and sort your organic targets</p>
+            </div>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Filter by keyword or status..."
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              className="w-full bg-[#18181b] border border-white/10 rounded-xl py-2 pl-9 pr-4 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5 text-[10px] uppercase font-mono tracking-wider text-white/40">
+                <th 
+                  className="py-3 px-4 font-semibold cursor-pointer hover:text-white/70 transition-colors"
+                  onClick={() => handleSort('keyword')}
+                >
+                  <div className="flex items-center gap-1.5">
+                    Keyword
+                    {sortConfig.key === 'keyword' && (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    )}
+                    {sortConfig.key !== 'keyword' && <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                  </div>
+                </th>
+                <th 
+                  className="py-3 px-4 font-semibold cursor-pointer hover:text-white/70 transition-colors"
+                  onClick={() => handleSort('rankingPosition')}
+                >
+                  <div className="flex items-center gap-1.5 justify-end">
+                    Ranking Pos
+                    {sortConfig.key === 'rankingPosition' && (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    )}
+                    {sortConfig.key !== 'rankingPosition' && <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                  </div>
+                </th>
+                <th 
+                  className="py-3 px-4 font-semibold cursor-pointer hover:text-white/70 transition-colors"
+                  onClick={() => handleSort('searchVolume')}
+                >
+                  <div className="flex items-center gap-1.5 justify-end">
+                    Volume
+                    {sortConfig.key === 'searchVolume' && (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    )}
+                    {sortConfig.key !== 'searchVolume' && <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                  </div>
+                </th>
+                <th 
+                  className="py-3 px-4 font-semibold cursor-pointer hover:text-white/70 transition-colors"
+                  onClick={() => handleSort('status')}
+                >
+                  <div className="flex items-center gap-1.5 justify-center">
+                    Status
+                    {sortConfig.key === 'status' && (
+                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                    )}
+                    {sortConfig.key !== 'status' && <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5 text-xs">
+              {sortedAndFilteredKeywords.map((item) => (
+                <tr key={item.id} className="hover:bg-white/5 transition-colors group">
+                  <td className="py-3 px-4 font-medium text-zinc-300">
+                    {item.keyword}
+                  </td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-400">
+                    #{item.rankingPosition}
+                  </td>
+                  <td className="py-3 px-4 text-right font-mono text-zinc-400">
+                    {item.searchVolume.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      item.status === 'Rising' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                      item.status === 'Stable' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                      'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {sortedAndFilteredKeywords.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-zinc-500 text-xs">
+                    No keywords matched your filter.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
